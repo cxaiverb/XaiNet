@@ -276,7 +276,7 @@ namespace NetworkTrayApp
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = @"C:\Windows\System32\ncpa.cpl",
+                FileName = Path.Combine(Environment.SystemDirectory, "ncpa.cpl"),
                 UseShellExecute = true
             });
         }

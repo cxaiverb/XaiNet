@@ -10,6 +10,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Threading;
+using Microsoft.Win32;
+using System.Reflection;
 
 namespace NetworkTrayApp
 {
@@ -32,11 +34,28 @@ namespace NetworkTrayApp
             }
             catch (Exception ex)
             {
-
+                Debug.WriteLine($"HasInternet method failed with {ex.Message}");
             }
             return false;
         }
 
+        private static void AddToAutoStart()
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            string executablePath;
+            if (string.IsNullOrEmpty(asm.Location))
+            {
+                executablePath = Path.Combine(AppContext.BaseDirectory,
+                    $"{Process.GetCurrentProcess().ProcessName}.exe");
+            }
+            else
+            {
+                executablePath = $"dotnet {asm.Location}";
+            }
+
+            var startupKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+            startupKey?.SetValue("XaiNet", executablePath);
+        }
         static void IconSelector(Object source, System.Timers.ElapsedEventArgs e)
         {
             string iconName = "no-network-w"; // Default to no network
@@ -83,6 +102,7 @@ namespace NetworkTrayApp
             SetupTrayIcon();
             LoadNetworkAdapters();
             PositionWindowNearTray();
+            AddToAutoStart();
             this.Hide();
 
             updateTimer = new DispatcherTimer();

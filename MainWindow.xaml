@@ -11,10 +11,59 @@
         Topmost="True"
         Deactivated="Window_Deactivated">
 
+    <Window.Resources>
+        <!-- Custom Scrollbar Style -->
+        <Style x:Key="CustomScrollBar" TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="8"/>
+            <!-- Change width -->
+            <Setter Property="Background" Value="Transparent"/>
+            <!-- Remove background -->
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid>
+                            <!-- Track -->
+                            <Rectangle Fill="Transparent" Width="8" RadiusX="4" RadiusY="4"/>
+                            <Track Name="PART_Track" IsDirectionReversed="true">
+                                <Track.Thumb>
+                                    <Thumb Width="8" Background="Gray" Opacity="0.7">
+                                        <Thumb.Style>
+                                            <Style TargetType="Thumb">
+                                                <Setter Property="Background" Value="#888"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Thumb">
+                                                            <Rectangle Fill="{TemplateBinding Background}" RadiusX="4" RadiusY="4"/>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Setter Property="Opacity" Value="0.5"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Background" Value="White"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Thumb.Style>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    
+    
     <Border CornerRadius="10" Background="#AA222222" Padding="10">
         <StackPanel>
             <TextBlock Text="Network Info" Foreground="White" FontSize="16" Margin="0,0,0,10"/>
-            <ScrollViewer Height="300">
+            <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
+                </ScrollViewer.Resources>
                 <ItemsControl Name="NetworkList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>

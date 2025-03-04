@@ -121,6 +121,15 @@
   <data name="no-network-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\no-network-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="options" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\options.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="pin-outline" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\pin-outline.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="pin-solid" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\pin-solid.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="wi-fi-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\wi-fi-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

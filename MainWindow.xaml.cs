@@ -19,6 +19,26 @@ namespace NetworkTrayApp
     {
         static NotifyIcon trayIcon;
 
+
+        private DispatcherTimer updateTimer;
+        public MainWindow()
+        {
+            InitializeComponent();
+            SetupTrayIcon();
+            LoadNetworkAdapters();
+            PositionWindowNearTray();
+            AddToAutoStart();
+            this.Hide();
+
+            updateTimer = new DispatcherTimer();
+            updateTimer.Interval = TimeSpan.FromSeconds(1);
+            updateTimer.Tick += SpeedChecker;
+            updateTimer.Start();
+
+            this.Loaded += OnLoaded;
+
+
+        }
         static bool HasInternet()
         {
             try
@@ -94,22 +114,40 @@ namespace NetworkTrayApp
 
 
             trayIcon.Icon = new Icon(new MemoryStream((byte[])XaiNet2.Properties.Resources.ResourceManager.GetObject(iconName)));
+            
         }
-        private DispatcherTimer updateTimer;
-        public MainWindow()
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            InitializeComponent();
-            SetupTrayIcon();
-            LoadNetworkAdapters();
-            PositionWindowNearTray();
-            AddToAutoStart();
-            this.Hide();
+            Debug.WriteLine("Loading icons...");
 
-            updateTimer = new DispatcherTimer();
-            updateTimer.Interval = TimeSpan.FromSeconds(1);
-            updateTimer.Tick += SpeedChecker;
-            updateTimer.Start();
+            string optionsIcon = "options";
 
+            var optionsIco = LoadImageFromResources(optionsIcon);
+
+            if (optionsIco != null)
+            {
+                OptionsButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = optionsIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
+
+            string defaultIcon = "pin-outline";
+            
+            var defaultImage = LoadImageFromResources(defaultIcon);
+
+            if (defaultImage != null)
+            {
+                PinButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = defaultImage,
+                    Width = 16,
+                    Height = 16
+                };
+            }
         }
 
         private void LoadNetworkAdapters()
@@ -270,7 +308,6 @@ namespace NetworkTrayApp
 
 
         private static System.Timers.Timer iconTimer;
-        private static System.Timers.Timer speedTimer;
 
         static void OpenNetworkSettings(object sender, EventArgs e)
         {
@@ -364,6 +401,32 @@ namespace NetworkTrayApp
                 PositionWindowNearTray();
             }
         }
+        private bool isPinned = false;
+        private void PinButton_Click(object sender, RoutedEventArgs e)
+        {
+            isPinned = !isPinned; // Toggle state
+            Topmost = isPinned;   // Keep window on top when pinned
+
+            string iconName = isPinned ? "pin-solid" : "pin-outline";
+
+            var newIcon = LoadImageFromResources(iconName);
+
+            if (newIcon != null)
+            {
+                PinButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = newIcon,
+                    Width = 16,
+                    Height = 16
+                };
+            }
+        }
+
+        private void OptionsButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("EEEEEEEEEEEEE");
+        }
+
 
         private void PositionWindowNearTray()
         {
@@ -371,11 +434,50 @@ namespace NetworkTrayApp
             this.Left = screen.Right - this.Width - 10;
             this.Top = screen.Bottom - this.Height - 10;
         }
+        private static System.Windows.Media.Imaging.BitmapImage LoadImageFromResources(string resourceName)
+        {
+            object resource = XaiNet2.Properties.Resources.ResourceManager.GetObject(resourceName);
+
+            if (resource == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                if (resource is byte[] imageBytes) // WPF stores .ico as byte[]
+                {
+                    using (MemoryStream memory = new MemoryStream(imageBytes))
+                    {
+                        var bitmapImage = new System.Windows.Media.Imaging.BitmapImage();
+                        bitmapImage.BeginInit();
+                        bitmapImage.StreamSource = memory;
+                        bitmapImage.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                        bitmapImage.EndInit();
+
+                        return bitmapImage;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading image '{resourceName}': {ex.Message}");
+            }
+
+            return null;
+        }
+
+
+
+
 
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            this.Hide(); // Hides the window when clicking outside
+            if (!isPinned)
+            {
+                this.Hide(); // Hides the window when clicking outside unless pinned
+            }
         }
 
         private void ShowWindow(object sender, EventArgs e)

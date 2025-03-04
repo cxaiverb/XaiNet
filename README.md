@@ -1,4 +1,5 @@
 I made this out of spite towards the default Windows networking taskbar item.
+Also Defender is currently upset with me, I have sent it in to be reviewed by Microsoft
 
 
 This program adds a new taskbar item.
@@ -13,8 +14,7 @@ On right click, it gives you 3 options and exit. Option 1 openes the control pan
 
 There is also a UI that appears when clicking the icon, and this is where most future updates will be. Its current state looks like this:
 
-
-![XaiNet2_OnTI4Nzc5U](https://github.com/user-attachments/assets/9f68e1e9-b22c-4c2c-80fa-690004dbdab3)
+![image](https://github.com/user-attachments/assets/a3122f08-4972-4138-838c-ee809300581e)
 
 
 I plan on adding OpenVPN config support so that you can enable and disable it in the toolbar with ease, graphs for network usage, and just overall making it look better.

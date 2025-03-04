@@ -18,5 +18,6 @@ There is also a UI that appears when clicking the icon, and this is where most f
 
 
 I plan on adding OpenVPN config support so that you can enable and disable it in the toolbar with ease, graphs for network usage, and just overall making it look better.
+I still need to add wifi searching/discovery, that will come in a future update
 
 This is heavily inspired by the Network Manager that comes with KDE.

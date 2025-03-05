@@ -50,19 +50,22 @@ namespace XaiNet2
         {
             AdapterTogglePanel.Children.Clear();
 
-            foreach (var adapter in owner.GetNetworkAdapters()) 
+            foreach (var adapter in owner.GetNetworkAdapters())
             {
+                Debug.WriteLine($"Creating checkbox for: {adapter.Name}");
+
                 var checkBox = new CheckBox
                 {
                     Content = adapter.Name,
-                    Foreground = System.Windows.Media.Brushes.White,
-                    IsChecked = owner.IsAdapterVisible(adapter.Name) 
+                    Foreground = Brushes.White,
+                    IsChecked = owner.IsAdapterVisible(adapter.Name) // Check if it's enabled
                 };
 
                 adapterCheckboxes[adapter.Name] = checkBox;
                 AdapterTogglePanel.Children.Add(checkBox);
             }
         }
+
 
 
         private bool IsAppInStartup()

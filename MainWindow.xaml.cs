@@ -132,9 +132,12 @@ namespace NetworkTrayApp
             }
         }
 
+        private List<NetworkAdapterInfo> allAdapters = new List<NetworkAdapterInfo>(); // Store all adapters
+        private HashSet<string> visibleAdapters = new HashSet<string>(); // Store user-selected visible adapters
+
         private void LoadNetworkAdapters()
         {
-            List<NetworkAdapterInfo> adapterList = new List<NetworkAdapterInfo>();
+            allAdapters.Clear(); // Reset the list
 
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
@@ -143,8 +146,7 @@ namespace NetworkTrayApp
                     .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     .Select(a => a.Address.ToString());
 
-
-                adapterList.Add(new NetworkAdapterInfo
+                allAdapters.Add(new NetworkAdapterInfo
                 {
                     Name = nic.Name,
                     Type = $"Type: {nic.NetworkInterfaceType}",
@@ -155,52 +157,56 @@ namespace NetworkTrayApp
                     ReceiveSpeed = "R: 0 bps",
                     AdapterId = nic.Id
                 });
-
             }
 
-
-            NetworkList.ItemsSource = adapterList;
+            LoadSavedAdapterSettings(); // Ensure visibility settings are applied
         }
-
-
-        private HashSet<string> visibleAdapters = new HashSet<string>();
 
         public void LoadSavedAdapterSettings()
         {
-            // Read saved adapters from settings
             string savedAdapters = XaiNet2.Properties.Settings.Default.VisibleAdapters;
+            Debug.WriteLine($"Saved Adapters: {savedAdapters}");
 
             if (!string.IsNullOrEmpty(savedAdapters))
             {
-                visibleAdapters = new HashSet<string>(savedAdapters.Split(',')); // Set the loaded adapters
+                visibleAdapters = new HashSet<string>(savedAdapters.Split(',')); // Load stored adapters
+            }
+            else
+            {
+                // If no saved settings, default to showing all adapters
+                visibleAdapters = new HashSet<string>(allAdapters.Select(a => a.Name));
             }
 
-            RefreshAdapters();
-        }
-
-        public void UpdateAdapterVisibility(List<string> enabledAdapters)
-        {
-            visibleAdapters.Clear(); // Clear previous values
-            visibleAdapters.UnionWith(enabledAdapters); // Add new ones
             RefreshAdapters();
         }
 
         private void RefreshAdapters()
         {
-            // Filter and update the UI based on stored visibility settings
-            NetworkList.ItemsSource = GetNetworkAdapters()
+            Debug.WriteLine("Refreshing Adapters...");
+            NetworkList.ItemsSource = allAdapters
                 .Where(adapter => visibleAdapters.Contains(adapter.Name))
                 .ToList();
+
+            Debug.WriteLine($"Adapters displayed: {NetworkList.Items.Count}");
         }
+
         public List<NetworkAdapterInfo> GetNetworkAdapters()
         {
-            return NetworkList.Items.Cast<NetworkAdapterInfo>().ToList();
+            return allAdapters; // Return the full list
         }
 
         public bool IsAdapterVisible(string adapterName)
         {
             return visibleAdapters.Contains(adapterName);
         }
+
+        public void UpdateAdapterVisibility(List<string> enabledAdapters)
+        {
+            visibleAdapters.Clear();
+            visibleAdapters.UnionWith(enabledAdapters);
+            RefreshAdapters();
+        }
+
 
         private void SpeedChecker(Object sender, EventArgs e)
         {
@@ -234,7 +240,6 @@ namespace NetworkTrayApp
         private Dictionary<string, (long SentSpeed, long ReceiveSpeed)> GetNetworkSpeeds()
         {
             Dictionary<string, (long SentSpeed, long ReceiveSpeed)> adapterSpeeds = new();
-            //NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
                 IPv4InterfaceStatistics stats = nic.GetIPv4Statistics();

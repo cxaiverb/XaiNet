@@ -11,6 +11,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Threading;
 using XaiNet2;
+using LiveChartsCore;
+using System.Collections.ObjectModel;
+using LiveChartsCore.SkiaSharpView.Painting;
+using LiveChartsCore.SkiaSharpView;
 
 namespace NetworkTrayApp
 {
@@ -229,7 +233,12 @@ namespace NetworkTrayApp
                         adapter.SentSpeed = $"S: {BitsToHumanReadable((long)sentSpeed)}/s";
                         adapter.ReceiveSpeed = $"R: {BitsToHumanReadable((long)recvSpeed)}/s";
                         //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
+                        // Update Graph
+                        if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
+                        if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
 
+                        adapter.DownloadSpeedValues.Add(recvSpeed);
+                        adapter.UploadSpeedValues.Add(sentSpeed);
                     }
 
                 }
@@ -297,6 +306,34 @@ namespace NetworkTrayApp
                         OnPropertyChanged(nameof(ReceiveSpeed));
                     }
                 }
+            }
+
+            // Graph Data for Speeds
+            public ObservableCollection<double> DownloadSpeedValues { get; set; } = new ObservableCollection<double> { 0 };
+            public ObservableCollection<double> UploadSpeedValues { get; set; } = new ObservableCollection<double> { 0 };
+
+            public ISeries[] Series { get; set; }
+
+            public NetworkAdapterInfo()
+            {
+                // Initialize the graph series
+                Series = new ISeries[]
+                {
+            new LineSeries<double>
+            {
+                Values = DownloadSpeedValues,
+                Fill = new SolidColorPaint(new SkiaSharp.SKColor(0, 200, 255, 100)),
+                GeometrySize = 0,
+                Stroke = new SolidColorPaint(new SkiaSharp.SKColor(0, 200, 255)) // Light blue for download
+            },
+            new LineSeries<double>
+            {
+                Values = UploadSpeedValues,
+                Fill = new SolidColorPaint(new SkiaSharp.SKColor(0, 255, 0, 100)),
+                GeometrySize = 0,
+                Stroke = new SolidColorPaint(new SkiaSharp.SKColor(0, 255, 0)) // Green for upload
+            }
+                };
             }
 
             public event PropertyChangedEventHandler PropertyChanged;

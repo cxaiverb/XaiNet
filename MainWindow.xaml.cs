@@ -10,8 +10,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Threading;
-using Microsoft.Win32;
-using System.Reflection;
+using XaiNet2;
 
 namespace NetworkTrayApp
 {
@@ -26,8 +25,8 @@ namespace NetworkTrayApp
             InitializeComponent();
             SetupTrayIcon();
             LoadNetworkAdapters();
+            LoadSavedAdapterSettings();
             PositionWindowNearTray();
-            AddToAutoStart();
             this.Hide();
 
             updateTimer = new DispatcherTimer();
@@ -59,23 +58,6 @@ namespace NetworkTrayApp
             return false;
         }
 
-        private static void AddToAutoStart()
-        {
-            var asm = Assembly.GetExecutingAssembly();
-            string executablePath;
-            if (string.IsNullOrEmpty(asm.Location))
-            {
-                executablePath = Path.Combine(AppContext.BaseDirectory,
-                    $"{Process.GetCurrentProcess().ProcessName}.exe");
-            }
-            else
-            {
-                executablePath = $"dotnet {asm.Location}";
-            }
-
-            var startupKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-            startupKey?.SetValue("XaiNet", executablePath);
-        }
         static void IconSelector(Object source, System.Timers.ElapsedEventArgs e)
         {
             string iconName = "no-network-w"; // Default to no network
@@ -180,10 +162,49 @@ namespace NetworkTrayApp
             NetworkList.ItemsSource = adapterList;
         }
 
+
+        private HashSet<string> visibleAdapters = new HashSet<string>();
+
+        public void LoadSavedAdapterSettings()
+        {
+            // Read saved adapters from settings
+            string savedAdapters = XaiNet2.Properties.Settings.Default.VisibleAdapters;
+
+            if (!string.IsNullOrEmpty(savedAdapters))
+            {
+                visibleAdapters = new HashSet<string>(savedAdapters.Split(',')); // Set the loaded adapters
+            }
+
+            RefreshAdapters();
+        }
+
+        public void UpdateAdapterVisibility(List<string> enabledAdapters)
+        {
+            visibleAdapters.Clear(); // Clear previous values
+            visibleAdapters.UnionWith(enabledAdapters); // Add new ones
+            RefreshAdapters();
+        }
+
+        private void RefreshAdapters()
+        {
+            // Filter and update the UI based on stored visibility settings
+            NetworkList.ItemsSource = GetNetworkAdapters()
+                .Where(adapter => visibleAdapters.Contains(adapter.Name))
+                .ToList();
+        }
+        public List<NetworkAdapterInfo> GetNetworkAdapters()
+        {
+            return NetworkList.Items.Cast<NetworkAdapterInfo>().ToList();
+        }
+
+        public bool IsAdapterVisible(string adapterName)
+        {
+            return visibleAdapters.Contains(adapterName);
+        }
+
         private void SpeedChecker(Object sender, EventArgs e)
         {
-            Debug.WriteLine("Checking speed...");
-            //Dispatcher.Invoke(() =>
+            //Debug.WriteLine("Checking speed...");
             {
                 Dictionary<string, (long SentSpeed, long ReceiveSpeed)> adapterSpeeds = GetNetworkSpeeds();
                 foreach (var item in NetworkList.Items)
@@ -201,7 +222,7 @@ namespace NetworkTrayApp
 
                         adapter.SentSpeed = $"S: {BitsToHumanReadable((long)sentSpeed)}/s";
                         adapter.ReceiveSpeed = $"R: {BitsToHumanReadable((long)recvSpeed)}/s";
-                        Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
+                        //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
 
                     }
 
@@ -424,7 +445,9 @@ namespace NetworkTrayApp
 
         private void OptionsButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("EEEEEEEEEEEEE");
+            Debug.WriteLine("Options button has been pressed");
+            OptionsWindow optionsWindow = new OptionsWindow(this);
+            optionsWindow.ShowDialog();
         }
 
 
@@ -468,23 +491,12 @@ namespace NetworkTrayApp
         }
 
 
-
-
-
-
         private void Window_Deactivated(object sender, EventArgs e)
         {
             if (!isPinned)
             {
                 this.Hide(); // Hides the window when clicking outside unless pinned
             }
-        }
-
-        private void ShowWindow(object sender, EventArgs e)
-        {
-            this.Show();
-            this.Activate();
-            PositionWindowNearTray();
         }
 
         private void ExitApp(object sender, EventArgs e)

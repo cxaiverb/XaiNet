@@ -121,6 +121,9 @@
   <data name="no-network-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\no-network-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="openvpn" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\openvpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="options" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\options.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
@@ -133,7 +136,13 @@
   <data name="wi-fi-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\wi-fi-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="wifi-vpn" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\wifi-vpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="wired-network-connection-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\wired-network-connection-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="wired-vpn" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\wired-vpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

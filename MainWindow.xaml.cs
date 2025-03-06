@@ -15,6 +15,7 @@ using LiveChartsCore;
 using System.Collections.ObjectModel;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView;
+using SkiaSharp;
 
 namespace NetworkTrayApp
 {
@@ -229,16 +230,18 @@ namespace NetworkTrayApp
                             sentSpeed = speeds.SentSpeed;
                             recvSpeed = speeds.ReceiveSpeed;
                         }
+                        string sentReadable = BitsToHumanReadable(sentSpeed);
+                        string recvReadable = BitsToHumanReadable(recvSpeed);
 
-                        adapter.SentSpeed = $"S: {BitsToHumanReadable((long)sentSpeed)}/s";
-                        adapter.ReceiveSpeed = $"R: {BitsToHumanReadable((long)recvSpeed)}/s";
-                        //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
+                        adapter.SentSpeed = $"S: {sentReadable}/s";
+                        adapter.ReceiveSpeed = $"R: {recvReadable}/s";
+                        Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
                         // Update Graph
                         if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
                         if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
 
-                        adapter.DownloadSpeedValues.Add(recvSpeed);
-                        adapter.UploadSpeedValues.Add(sentSpeed);
+                        adapter.DownloadSpeedValues.Add(recvReadable);
+                        adapter.UploadSpeedValues.Add(sentReadable);
                     }
 
                 }
@@ -309,8 +312,8 @@ namespace NetworkTrayApp
             }
 
             // Graph Data for Speeds
-            public ObservableCollection<double> DownloadSpeedValues { get; set; } = new ObservableCollection<double> { 0 };
-            public ObservableCollection<double> UploadSpeedValues { get; set; } = new ObservableCollection<double> { 0 };
+            public ObservableCollection<string> DownloadSpeedValues { get; set; } = new ObservableCollection<string> { };
+            public ObservableCollection<string> UploadSpeedValues { get; set; } = new ObservableCollection<string> { };
 
             public ISeries[] Series { get; set; }
 
@@ -319,22 +322,25 @@ namespace NetworkTrayApp
                 // Initialize the graph series
                 Series = new ISeries[]
                 {
-            new LineSeries<double>
-            {
-                Values = DownloadSpeedValues,
-                Fill = new SolidColorPaint(new SkiaSharp.SKColor(0, 200, 255, 100)),
-                GeometrySize = 0,
-                Stroke = new SolidColorPaint(new SkiaSharp.SKColor(0, 200, 255)) // Light blue for download
-            },
-            new LineSeries<double>
-            {
-                Values = UploadSpeedValues,
-                Fill = new SolidColorPaint(new SkiaSharp.SKColor(0, 255, 0, 100)),
-                GeometrySize = 0,
-                Stroke = new SolidColorPaint(new SkiaSharp.SKColor(0, 255, 0)) // Green for upload
-            }
+                    new LineSeries<string>
+                    {
+                        Values = DownloadSpeedValues,
+                        Fill = new SolidColorPaint(new SKColor(0, 200, 255, 100)),
+                        GeometrySize = 0,
+                        Stroke = new SolidColorPaint(new SKColor(0, 200, 255)) // Light blue for download
+                    },
+                    new LineSeries<string>
+                    {
+                        Values = UploadSpeedValues,
+                        Fill = new SolidColorPaint(new SKColor(0, 255, 0, 100)),
+                        GeometrySize = 0,
+                        Stroke = new SolidColorPaint(new SKColor(0, 255, 0)) // Green for upload
+                    }
                 };
             }
+            public SolidColorPaint TooltipBackgroundPaint { get; set; } = new SolidColorPaint(new SKColor(0, 0, 0, 0));
+            public SolidColorPaint TooltipTextPaint { get; set; } = new SolidColorPaint(new SKColor(255, 255, 255));
+
 
             public event PropertyChangedEventHandler PropertyChanged;
             protected void OnPropertyChanged(string propertyName)

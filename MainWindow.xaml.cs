@@ -239,9 +239,9 @@ namespace NetworkTrayApp
                         // Update Graph
                         if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
                         if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
-
-                        adapter.DownloadSpeedValues.Add(recvReadable);
-                        adapter.UploadSpeedValues.Add(sentReadable);
+                        
+                        adapter.UploadSpeedValues.Add(sentSpeed);
+                        adapter.DownloadSpeedValues.Add(recvSpeed);
                     }
 
                 }
@@ -312,8 +312,8 @@ namespace NetworkTrayApp
             }
 
             // Graph Data for Speeds
-            public ObservableCollection<string> DownloadSpeedValues { get; set; } = new ObservableCollection<string> { };
-            public ObservableCollection<string> UploadSpeedValues { get; set; } = new ObservableCollection<string> { };
+            public ObservableCollection<long> DownloadSpeedValues { get; set; } = new ObservableCollection<long> { };
+            public ObservableCollection<long> UploadSpeedValues { get; set; } = new ObservableCollection<long> { };
 
             public ISeries[] Series { get; set; }
 
@@ -322,14 +322,14 @@ namespace NetworkTrayApp
                 // Initialize the graph series
                 Series = new ISeries[]
                 {
-                    new LineSeries<string>
+                    new LineSeries<long>
                     {
                         Values = DownloadSpeedValues,
                         Fill = new SolidColorPaint(new SKColor(0, 200, 255, 100)),
                         GeometrySize = 0,
                         Stroke = new SolidColorPaint(new SKColor(0, 200, 255)) // Light blue for download
                     },
-                    new LineSeries<string>
+                    new LineSeries<long>
                     {
                         Values = UploadSpeedValues,
                         Fill = new SolidColorPaint(new SKColor(0, 255, 0, 100)),

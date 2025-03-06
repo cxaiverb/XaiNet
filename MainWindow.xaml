@@ -53,17 +53,7 @@
                                 </Expander.Resources>
                                 <StackPanel Margin="10,0,0,0">
                                     <TabControl Background="Transparent">
-                                        <TabItem Header="Details">
-                                            <StackPanel Margin="10,0,0,0">
-                                                <TextBlock Text="{Binding Type}" Foreground="LightGray"/>
-                                                <TextBlock Text="{Binding Status}" Foreground="LightGray"/>
-                                                <TextBlock Text="{Binding IPAddress}" Foreground="LightGray"/>
-                                                <TextBlock Text="{Binding Speed}" Foreground="LightGray"/>
-                                                <TextBlock Text="{Binding SentSpeed}" Foreground="LightGray"/>
-                                                <TextBlock Text="{Binding ReceiveSpeed}" Foreground="LightGray"/>
-                                            </StackPanel>
-                                        </TabItem>
-                                        <TabItem Header="Speed">
+                                        <TabItem Header="Speed" Width="152">
                                             <StackPanel>
                                                 <lvc:CartesianChart Series="{Binding Series}" Height="150" Margin="0,0,0,0"
                                                                     YAxes="{Binding YAxes}"
@@ -74,6 +64,16 @@
                                                                     TooltipTextSize="14"
                                                                     FindingStrategy="CompareOnlyX"                                                                   
                                                                     />
+                                            </StackPanel>
+                                        </TabItem>
+                                        <TabItem Header="Details" Width="150">
+                                            <StackPanel Margin="10,0,0,0">
+                                                <TextBlock Text="{Binding Type}" Foreground="LightGray"/>
+                                                <TextBlock Text="{Binding Status}" Foreground="LightGray"/>
+                                                <TextBlock Text="{Binding IPAddress}" Foreground="LightGray"/>
+                                                <TextBlock Text="{Binding Speed}" Foreground="LightGray"/>
+                                                <TextBlock Text="{Binding SentSpeed}" Foreground="LightGray"/>
+                                                <TextBlock Text="{Binding ReceiveSpeed}" Foreground="LightGray"/>
                                             </StackPanel>
                                         </TabItem>
                                     </TabControl>

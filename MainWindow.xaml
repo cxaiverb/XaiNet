@@ -65,13 +65,14 @@
                                         </TabItem>
                                         <TabItem Header="Speed">
                                             <StackPanel>
-                                                <lvc:CartesianChart Series="{Binding Series}" Height="100" Margin="0,50,0,0"
-                                                                    TooltipPosition="Auto"
+                                                <lvc:CartesianChart Series="{Binding Series}" Height="150" Margin="0,0,0,0"
+                                                                    YAxes="{Binding YAxes}"
+                                                                    XAxes="{Binding XAxes}"
+                                                                    TooltipPosition="Top"
                                                                     TooltipBackgroundPaint="{Binding TooltipBackgroundPaint}"
                                                                     TooltipTextPaint="{Binding TooltipTextPaint}"
                                                                     TooltipTextSize="14"
                                                                     FindingStrategy="CompareOnlyX"                                                                   
-                                                                    
                                                                     />
                                             </StackPanel>
                                         </TabItem>

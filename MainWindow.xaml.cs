@@ -16,6 +16,7 @@ using System.Collections.ObjectModel;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView;
 using SkiaSharp;
+using System.Security.Cryptography.X509Certificates;
 
 namespace NetworkTrayApp
 {
@@ -213,7 +214,7 @@ namespace NetworkTrayApp
         }
 
 
-        private void SpeedChecker(Object sender, EventArgs e)
+        public void SpeedChecker(Object sender, EventArgs e)
         {
             //Debug.WriteLine("Checking speed...");
             {
@@ -230,12 +231,9 @@ namespace NetworkTrayApp
                             sentSpeed = speeds.SentSpeed;
                             recvSpeed = speeds.ReceiveSpeed;
                         }
-                        string sentReadable = BitsToHumanReadable(sentSpeed);
-                        string recvReadable = BitsToHumanReadable(recvSpeed);
-
-                        adapter.SentSpeed = $"S: {sentReadable}/s";
-                        adapter.ReceiveSpeed = $"R: {recvReadable}/s";
-                        Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
+                        adapter.SentSpeed = $"S: {BitsToHumanReadable(sentSpeed)}/s";
+                        adapter.ReceiveSpeed = $"R: {BitsToHumanReadable(recvSpeed)}/s";
+                        //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
                         // Update Graph
                         if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
                         if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
@@ -327,17 +325,34 @@ namespace NetworkTrayApp
                         Values = DownloadSpeedValues,
                         Fill = new SolidColorPaint(new SKColor(0, 200, 255, 100)),
                         GeometrySize = 0,
-                        Stroke = new SolidColorPaint(new SKColor(0, 200, 255)) // Light blue for download
+                        Stroke = new SolidColorPaint(new SKColor(0, 200, 255)), // Light blue for download
+                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
+
                     },
                     new LineSeries<long>
                     {
                         Values = UploadSpeedValues,
                         Fill = new SolidColorPaint(new SKColor(0, 255, 0, 100)),
                         GeometrySize = 0,
-                        Stroke = new SolidColorPaint(new SKColor(0, 255, 0)) // Green for upload
+                        Stroke = new SolidColorPaint(new SKColor(0, 255, 0)), // Green for upload
+                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
                     }
                 };
             }
+            public Axis[] YAxes { get; set; } = new Axis[]
+            {
+                new Axis
+                {
+                    TextSize = 0,
+                }
+            };
+            public Axis[] XAxes { get; set; } = new Axis[]
+            {
+                new Axis
+                {
+                    LabelsPaint = new SolidColorPaint(new SKColor(200, 200, 200))
+                }
+            };
             public SolidColorPaint TooltipBackgroundPaint { get; set; } = new SolidColorPaint(new SKColor(0, 0, 0, 0));
             public SolidColorPaint TooltipTextPaint { get; set; } = new SolidColorPaint(new SKColor(255, 255, 255));
 

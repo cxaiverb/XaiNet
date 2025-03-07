@@ -34,10 +34,6 @@ namespace NetworkTrayApp
             LoadSavedAdapterSettings();
             PositionWindowNearTray();
             this.Hide();
-
-            Font defaultFont = System.Drawing.SystemFonts.DefaultFont;
-            Debug.WriteLine(System.Drawing.SystemFonts.DefaultFont.Name);
-
             updateTimer = new DispatcherTimer();
             updateTimer.Interval = TimeSpan.FromSeconds(1);
             updateTimer.Tick += SpeedChecker;
@@ -557,6 +553,19 @@ namespace NetworkTrayApp
             return null;
         }
 
+        public void SetMyrkurMode(bool enable)
+        {
+            if (enable)
+            {
+                this.FontFamily = new System.Windows.Media.FontFamily("Comic Sans MS");
+                Debug.WriteLine("Enabled MyrkurMode");
+            }
+            else
+            {
+                this.FontFamily = new System.Windows.Media.FontFamily("Segoe UI"); // Default
+                Debug.WriteLine("Disabled MyrkurMode");
+            }
+        }
 
         private void Window_Deactivated(object sender, EventArgs e)
         {

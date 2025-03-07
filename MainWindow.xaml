@@ -11,8 +11,7 @@
         WindowStyle="None"
         ResizeMode="NoResize"
         Topmost="True"
-        Deactivated="Window_Deactivated"
-        FontFamily="{Binding SystemFont}">
+        Deactivated="Window_Deactivated">
 
 <Window.Resources>
     <ResourceDictionary>

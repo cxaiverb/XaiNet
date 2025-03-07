@@ -17,7 +17,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-
+    
     <Border CornerRadius="10" Background="#AA222222" Padding="10">
         <Grid>
             <!-- Define Rows: Scrollable Content (Row 0) + Fixed Save Button (Row 1) -->
@@ -48,6 +48,7 @@
                         </Expander.Resources>
                         <StackPanel Margin="10">
                             <CheckBox Content="Enable Auto-Start" Name="AutoStartCheckBox" Foreground="White" />
+                            <CheckBox Content="Enable Myrkur Mode" Name="MyrkurModeCheckBox" Foreground="White"/>
                         </StackPanel>
                     </Expander>
                 </StackPanel>

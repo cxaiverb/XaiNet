@@ -46,5 +46,17 @@ namespace XaiNet2.Properties {
                 this["VisibleAdapters"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MyrkurMode {
+            get {
+                return ((bool)(this["MyrkurMode"]));
+            }
+            set {
+                this["MyrkurMode"] = value;
+            }
+        }
     }
 }

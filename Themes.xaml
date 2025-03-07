@@ -43,15 +43,10 @@
         </Setter>
     </Style>
     <!-- Custome Expander Style -->
-    <SolidColorBrush x:Key="Expander.Static.Circle.Stroke" Color="Transparent"/>
-    <SolidColorBrush x:Key="Expander.Static.Circle.Fill" Color="Transparent"/>
-    <SolidColorBrush x:Key="Expander.Static.Arrow.Stroke" Color="#c2c2d6"/>
-    <SolidColorBrush x:Key="Expander.MouseOver.Circle.Stroke" Color="#c2c2d6"/>
-    <SolidColorBrush x:Key="Expander.MouseOver.Circle.Fill" Color="Transparent"/>
-    <SolidColorBrush x:Key="Expander.MouseOver.Arrow.Stroke" Color="#c2c2d6"/>
-    <SolidColorBrush x:Key="Expander.Pressed.Circle.Stroke" Color="#c2c2d6"/>
-    <SolidColorBrush x:Key="Expander.Pressed.Circle.Fill" Color="#b3b3cc"/>
-    <SolidColorBrush x:Key="Expander.Pressed.Arrow.Stroke" Color="#c2c2d6"/>
+    <SolidColorBrush x:Key="Transparent" Color="Transparent"/>
+    <SolidColorBrush x:Key="LightGray" Color="LightGray"/>
+    <SolidColorBrush x:Key="BlueGray" Color="#b3b3cc"/>
+    <SolidColorBrush x:Key="TabHeader" Color="#24c6c6c6"/>
     <SolidColorBrush x:Key="Expander.Disabled.Circle.Stroke" Color="#FFBCBCBC"/>
     <SolidColorBrush x:Key="Expander.Disabled.Circle.Fill" Color="#FFE6E6E6"/>
     <SolidColorBrush x:Key="Expander.Disabled.Arrow.Stroke" Color="#FF707070"/>
@@ -76,8 +71,8 @@
                                 <ColumnDefinition Width="19"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Ellipse x:Name="circle" Fill="{StaticResource Expander.Static.Circle.Fill}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Expander.Static.Circle.Stroke}" VerticalAlignment="Center" Width="19"/>
-                            <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource Expander.Static.Arrow.Stroke}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
+                            <Ellipse x:Name="circle" Fill="{StaticResource Transparent}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Transparent}" VerticalAlignment="Center" Width="19"/>
+                            <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource LightGray}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
                             <ContentPresenter Grid.Column="1" HorizontalAlignment="Left" Margin="4,0,0,0" RecognizesAccessKey="True" SnapsToDevicePixels="True" VerticalAlignment="Center"/>
                         </Grid>
                     </Border>
@@ -86,15 +81,15 @@
                             <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Stroke}"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.MouseOver.Arrow.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Transparent}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
                             <Setter Property="StrokeThickness" TargetName="circle" Value="1.5"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.Pressed.Arrow.Stroke}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource BlueGray}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Disabled.Circle.Stroke}"/>
@@ -126,8 +121,8 @@
                                         </TransformGroup.Children>
                                     </TransformGroup>
                                 </Grid.LayoutTransform>
-                                <Ellipse x:Name="circle" Fill="{StaticResource Expander.Static.Circle.Fill}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Expander.Static.Circle.Stroke}" VerticalAlignment="Center" Width="19"/>
-                                <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource Expander.Static.Arrow.Stroke}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
+                                <Ellipse x:Name="circle" Fill="{StaticResource Transparent}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Transparent}" VerticalAlignment="Center" Width="19"/>
+                                <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource LightGray}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
                             </Grid>
                             <ContentPresenter Grid.Column="1" HorizontalAlignment="Left" Margin="4,0,0,0" RecognizesAccessKey="True" SnapsToDevicePixels="True" VerticalAlignment="Center"/>
                         </Grid>
@@ -137,15 +132,15 @@
                             <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Stroke}"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.MouseOver.Arrow.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Transparent}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
                             <Setter Property="StrokeThickness" TargetName="circle" Value="1.5"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.Pressed.Arrow.Stroke}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource BlueGray}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Disabled.Circle.Stroke}"/>
@@ -177,8 +172,8 @@
                                         </TransformGroup.Children>
                                     </TransformGroup>
                                 </Grid.LayoutTransform>
-                                <Ellipse x:Name="circle" Fill="{StaticResource Expander.Static.Circle.Fill}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Expander.Static.Circle.Stroke}" VerticalAlignment="Center" Width="19"/>
-                                <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource Expander.Static.Arrow.Stroke}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
+                                <Ellipse x:Name="circle" Fill="{StaticResource Transparent}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Transparent}" VerticalAlignment="Center" Width="19"/>
+                                <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource LightGray}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
                             </Grid>
                             <ContentPresenter HorizontalAlignment="Center" Margin="0,4,0,0" RecognizesAccessKey="True" Grid.Row="1" SnapsToDevicePixels="True" VerticalAlignment="Top"/>
                         </Grid>
@@ -188,15 +183,15 @@
                             <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Stroke}"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.MouseOver.Arrow.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Transparent}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
                             <Setter Property="StrokeThickness" TargetName="circle" Value="1.5"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.Pressed.Arrow.Stroke}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource BlueGray}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Disabled.Circle.Stroke}"/>
@@ -228,8 +223,8 @@
                                         </TransformGroup.Children>
                                     </TransformGroup>
                                 </Grid.LayoutTransform>
-                                <Ellipse x:Name="circle" Fill="{StaticResource Expander.Static.Circle.Fill}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Expander.Static.Circle.Stroke}" VerticalAlignment="Center" Width="19"/>
-                                <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource Expander.Static.Arrow.Stroke}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
+                                <Ellipse x:Name="circle" Fill="{StaticResource Transparent}" HorizontalAlignment="Center" Height="19" Stroke="{StaticResource Transparent}" VerticalAlignment="Center" Width="19"/>
+                                <Path x:Name="arrow" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" Stroke="{StaticResource LightGray}" SnapsToDevicePixels="false" StrokeThickness="2" VerticalAlignment="Center"/>
                             </Grid>
                             <ContentPresenter HorizontalAlignment="Center" Margin="0,4,0,0" RecognizesAccessKey="True" Grid.Row="1" SnapsToDevicePixels="True" VerticalAlignment="Top"/>
                         </Grid>
@@ -239,15 +234,15 @@
                             <Setter Property="Data" TargetName="arrow" Value="M 1,4.5  L 4.5,1  L 8,4.5"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Stroke}"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.MouseOver.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.MouseOver.Arrow.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Transparent}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Stroke}"/>
+                            <Setter Property="Stroke" TargetName="circle" Value="{StaticResource LightGray}"/>
                             <Setter Property="StrokeThickness" TargetName="circle" Value="1.5"/>
-                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource Expander.Pressed.Circle.Fill}"/>
-                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource Expander.Pressed.Arrow.Stroke}"/>
+                            <Setter Property="Fill" TargetName="circle" Value="{StaticResource BlueGray}"/>
+                            <Setter Property="Stroke" TargetName="arrow" Value="{StaticResource LightGray}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Stroke" TargetName="circle" Value="{StaticResource Expander.Disabled.Circle.Stroke}"/>
@@ -296,6 +291,43 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- Custom TabItem Style -->
+    <Style TargetType="{x:Type TabItem}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TabItem}">
+                    <Grid>
+                        <Border
+                            Name="Border"
+                            Margin="0,0,-4,0"
+                            Background="{StaticResource TabHeader}"
+                            BorderBrush="{StaticResource Transparent}"
+                            BorderThickness="1,1,1,1">
+                            <ContentPresenter x:Name="ContentSite"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Center"
+                                              ContentSource="Header"
+                                              Margin="12,2,12,2"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="FontSize" Value="16"/>
+                            <Setter Property="Foreground" Value="{StaticResource LightGray}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource LightGray}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource Transparent}"/>
+                            <Setter Property="Foreground" Value="{StaticResource LightGray}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

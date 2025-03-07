@@ -35,6 +35,9 @@ namespace NetworkTrayApp
             PositionWindowNearTray();
             this.Hide();
 
+            Font defaultFont = System.Drawing.SystemFonts.DefaultFont;
+            Debug.WriteLine(System.Drawing.SystemFonts.DefaultFont.Name);
+
             updateTimer = new DispatcherTimer();
             updateTimer.Interval = TimeSpan.FromSeconds(1);
             updateTimer.Tick += SpeedChecker;
@@ -44,6 +47,7 @@ namespace NetworkTrayApp
 
 
         }
+
         static bool HasInternet()
         {
             try

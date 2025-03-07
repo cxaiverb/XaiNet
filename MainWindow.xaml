@@ -11,7 +11,8 @@
         WindowStyle="None"
         ResizeMode="NoResize"
         Topmost="True"
-        Deactivated="Window_Deactivated">
+        Deactivated="Window_Deactivated"
+        FontFamily="{Binding SystemFont}">
 
 <Window.Resources>
     <ResourceDictionary>
@@ -52,8 +53,8 @@
                                     <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
                                 </Expander.Resources>
                                 <StackPanel Margin="10,0,0,0">
-                                    <TabControl Background="Transparent">
-                                        <TabItem Header="Speed" Width="152">
+                                    <TabControl Background="Transparent" HorizontalAlignment="Center">
+                                        <TabItem Header="Speed" Width="140">
                                             <StackPanel>
                                                 <lvc:CartesianChart Series="{Binding Series}" Height="150" Margin="0,0,0,0"
                                                                     YAxes="{Binding YAxes}"
@@ -66,7 +67,7 @@
                                                                     />
                                             </StackPanel>
                                         </TabItem>
-                                        <TabItem Header="Details" Width="150">
+                                        <TabItem Header="Details" Width="140">
                                             <StackPanel Margin="10,0,0,0">
                                                 <TextBlock Text="{Binding Type}" Foreground="LightGray"/>
                                                 <TextBlock Text="{Binding Status}" Foreground="LightGray"/>

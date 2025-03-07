@@ -14,10 +14,14 @@ On right click, it gives you 3 options and exit. Option 1 openes the control pan
 
 There is also a UI that appears when clicking the icon, and this is where most future updates will be. Its current state looks like this:
 
-![image](https://github.com/user-attachments/assets/a3122f08-4972-4138-838c-ee809300581e)
+![image](https://github.com/user-attachments/assets/8cbb9ff9-b36b-48eb-91f5-ad170eb36ddc)
 
 
-I plan on adding OpenVPN config support so that you can enable and disable it in the toolbar with ease, graphs for network usage, and just overall making it look better.
+You can also disable viewing of adapters that you arent interested in!
+![image](https://github.com/user-attachments/assets/5fb9e229-26b7-4d13-8d52-15ca28c2a08b)
+
+
+I plan on adding OpenVPN config support so that you can enable and disable it in the toolbar with ease.
 I still need to add wifi searching/discovery, that will come in a future update
 
 This is heavily inspired by the Network Manager that comes with KDE.

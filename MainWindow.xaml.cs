@@ -10,8 +10,13 @@ using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Threading;
-using Microsoft.Win32;
-using System.Reflection;
+using XaiNet2;
+using LiveChartsCore;
+using System.Collections.ObjectModel;
+using LiveChartsCore.SkiaSharpView.Painting;
+using LiveChartsCore.SkiaSharpView;
+using SkiaSharp;
+using System.Security.Cryptography.X509Certificates;
 
 namespace NetworkTrayApp
 {
@@ -26,10 +31,9 @@ namespace NetworkTrayApp
             InitializeComponent();
             SetupTrayIcon();
             LoadNetworkAdapters();
+            LoadSavedAdapterSettings();
             PositionWindowNearTray();
-            AddToAutoStart();
             this.Hide();
-
             updateTimer = new DispatcherTimer();
             updateTimer.Interval = TimeSpan.FromSeconds(1);
             updateTimer.Tick += SpeedChecker;
@@ -39,6 +43,7 @@ namespace NetworkTrayApp
 
 
         }
+
         static bool HasInternet()
         {
             try
@@ -59,23 +64,6 @@ namespace NetworkTrayApp
             return false;
         }
 
-        private static void AddToAutoStart()
-        {
-            var asm = Assembly.GetExecutingAssembly();
-            string executablePath;
-            if (string.IsNullOrEmpty(asm.Location))
-            {
-                executablePath = Path.Combine(AppContext.BaseDirectory,
-                    $"{Process.GetCurrentProcess().ProcessName}.exe");
-            }
-            else
-            {
-                executablePath = $"dotnet {asm.Location}";
-            }
-
-            var startupKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-            startupKey?.SetValue("XaiNet", executablePath);
-        }
         static void IconSelector(Object source, System.Timers.ElapsedEventArgs e)
         {
             string iconName = "no-network-w"; // Default to no network
@@ -150,9 +138,12 @@ namespace NetworkTrayApp
             }
         }
 
+        private List<NetworkAdapterInfo> allAdapters = new List<NetworkAdapterInfo>(); // Store all adapters
+        private HashSet<string> visibleAdapters = new HashSet<string>(); // Store user-selected visible adapters
+
         private void LoadNetworkAdapters()
         {
-            List<NetworkAdapterInfo> adapterList = new List<NetworkAdapterInfo>();
+            allAdapters.Clear(); // Reset the list
 
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
@@ -161,8 +152,7 @@ namespace NetworkTrayApp
                     .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     .Select(a => a.Address.ToString());
 
-
-                adapterList.Add(new NetworkAdapterInfo
+                allAdapters.Add(new NetworkAdapterInfo
                 {
                     Name = nic.Name,
                     Type = $"Type: {nic.NetworkInterfaceType}",
@@ -173,17 +163,60 @@ namespace NetworkTrayApp
                     ReceiveSpeed = "R: 0 bps",
                     AdapterId = nic.Id
                 });
-
             }
 
-
-            NetworkList.ItemsSource = adapterList;
+            LoadSavedAdapterSettings(); // Ensure visibility settings are applied
         }
 
-        private void SpeedChecker(Object sender, EventArgs e)
+        public void LoadSavedAdapterSettings()
         {
-            Debug.WriteLine("Checking speed...");
-            //Dispatcher.Invoke(() =>
+            string savedAdapters = XaiNet2.Properties.Settings.Default.VisibleAdapters;
+            Debug.WriteLine($"Saved Adapters: {savedAdapters}");
+
+            if (!string.IsNullOrEmpty(savedAdapters))
+            {
+                visibleAdapters = new HashSet<string>(savedAdapters.Split(',')); // Load stored adapters
+            }
+            else
+            {
+                // If no saved settings, default to showing all adapters
+                visibleAdapters = new HashSet<string>(allAdapters.Select(a => a.Name));
+            }
+
+            RefreshAdapters();
+        }
+
+        private void RefreshAdapters()
+        {
+            Debug.WriteLine("Refreshing Adapters...");
+            NetworkList.ItemsSource = allAdapters
+                .Where(adapter => visibleAdapters.Contains(adapter.Name))
+                .ToList();
+
+            Debug.WriteLine($"Adapters displayed: {NetworkList.Items.Count}");
+        }
+
+        public List<NetworkAdapterInfo> GetNetworkAdapters()
+        {
+            return allAdapters; // Return the full list
+        }
+
+        public bool IsAdapterVisible(string adapterName)
+        {
+            return visibleAdapters.Contains(adapterName);
+        }
+
+        public void UpdateAdapterVisibility(List<string> enabledAdapters)
+        {
+            visibleAdapters.Clear();
+            visibleAdapters.UnionWith(enabledAdapters);
+            RefreshAdapters();
+        }
+
+
+        public void SpeedChecker(Object sender, EventArgs e)
+        {
+            //Debug.WriteLine("Checking speed...");
             {
                 Dictionary<string, (long SentSpeed, long ReceiveSpeed)> adapterSpeeds = GetNetworkSpeeds();
                 foreach (var item in NetworkList.Items)
@@ -198,11 +231,15 @@ namespace NetworkTrayApp
                             sentSpeed = speeds.SentSpeed;
                             recvSpeed = speeds.ReceiveSpeed;
                         }
-
-                        adapter.SentSpeed = $"S: {BitsToHumanReadable((long)sentSpeed)}/s";
-                        adapter.ReceiveSpeed = $"R: {BitsToHumanReadable((long)recvSpeed)}/s";
-                        Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
-
+                        adapter.SentSpeed = $"S: {BitsToHumanReadable(sentSpeed)}/s";
+                        adapter.ReceiveSpeed = $"R: {BitsToHumanReadable(recvSpeed)}/s";
+                        //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
+                        // Update Graph
+                        if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
+                        if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
+                        
+                        adapter.UploadSpeedValues.Add(sentSpeed);
+                        adapter.DownloadSpeedValues.Add(recvSpeed);
                     }
 
                 }
@@ -213,7 +250,6 @@ namespace NetworkTrayApp
         private Dictionary<string, (long SentSpeed, long ReceiveSpeed)> GetNetworkSpeeds()
         {
             Dictionary<string, (long SentSpeed, long ReceiveSpeed)> adapterSpeeds = new();
-            //NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
                 IPv4InterfaceStatistics stats = nic.GetIPv4Statistics();
@@ -272,6 +308,54 @@ namespace NetworkTrayApp
                     }
                 }
             }
+
+            // Graph Data for Speeds
+            public ObservableCollection<long> DownloadSpeedValues { get; set; } = new ObservableCollection<long> { };
+            public ObservableCollection<long> UploadSpeedValues { get; set; } = new ObservableCollection<long> { };
+
+            public ISeries[] Series { get; set; }
+
+            public NetworkAdapterInfo()
+            {
+                // Initialize the graph series
+                Series = new ISeries[]
+                {
+                    new LineSeries<long>
+                    {
+                        Values = DownloadSpeedValues,
+                        Fill = new SolidColorPaint(new SKColor(0, 200, 255, 100)),
+                        GeometrySize = 0,
+                        Stroke = new SolidColorPaint(new SKColor(0, 200, 255)), // Light blue for download
+                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
+
+                    },
+                    new LineSeries<long>
+                    {
+                        Values = UploadSpeedValues,
+                        Fill = new SolidColorPaint(new SKColor(0, 255, 0, 100)),
+                        GeometrySize = 0,
+                        Stroke = new SolidColorPaint(new SKColor(0, 255, 0)), // Green for upload
+                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
+                    }
+                };
+            }
+            public Axis[] YAxes { get; set; } = new Axis[]
+            {
+                new Axis
+                {
+                    TextSize = 0,
+                }
+            };
+            public Axis[] XAxes { get; set; } = new Axis[]
+            {
+                new Axis
+                {
+                    LabelsPaint = new SolidColorPaint(new SKColor(200, 200, 200))
+                }
+            };
+            public SolidColorPaint TooltipBackgroundPaint { get; set; } = new SolidColorPaint(new SKColor(0, 0, 0, 0));
+            public SolidColorPaint TooltipTextPaint { get; set; } = new SolidColorPaint(new SKColor(255, 255, 255));
+
 
             public event PropertyChangedEventHandler PropertyChanged;
             protected void OnPropertyChanged(string propertyName)
@@ -424,7 +508,9 @@ namespace NetworkTrayApp
 
         private void OptionsButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("EEEEEEEEEEEEE");
+            Debug.WriteLine("Options button has been pressed");
+            OptionsWindow optionsWindow = new OptionsWindow(this);
+            optionsWindow.ShowDialog();
         }
 
 
@@ -467,10 +553,19 @@ namespace NetworkTrayApp
             return null;
         }
 
-
-
-
-
+        public void SetMyrkurMode(bool enable)
+        {
+            if (enable)
+            {
+                this.FontFamily = new System.Windows.Media.FontFamily("Comic Sans MS");
+                Debug.WriteLine("Enabled MyrkurMode");
+            }
+            else
+            {
+                this.FontFamily = new System.Windows.Media.FontFamily("Segoe UI"); // Default
+                Debug.WriteLine("Disabled MyrkurMode");
+            }
+        }
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
@@ -478,13 +573,6 @@ namespace NetworkTrayApp
             {
                 this.Hide(); // Hides the window when clicking outside unless pinned
             }
-        }
-
-        private void ShowWindow(object sender, EventArgs e)
-        {
-            this.Show();
-            this.Activate();
-            PositionWindowNearTray();
         }
 
         private void ExitApp(object sender, EventArgs e)

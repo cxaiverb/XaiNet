@@ -22,5 +22,41 @@ namespace XaiNet2.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AutoStart {
+            get {
+                return ((bool)(this["AutoStart"]));
+            }
+            set {
+                this["AutoStart"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string VisibleAdapters {
+            get {
+                return ((string)(this["VisibleAdapters"]));
+            }
+            set {
+                this["VisibleAdapters"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MyrkurMode {
+            get {
+                return ((bool)(this["MyrkurMode"]));
+            }
+            set {
+                this["MyrkurMode"] = value;
+            }
+        }
     }
 }

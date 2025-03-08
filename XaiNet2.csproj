@@ -2,10 +2,9 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows10.0.18362.0</TargetFramework>
+		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<EnableWindowsTargeting>true</EnableWindowsTargeting>
-		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<UseWindowsForms>true</UseWindowsForms>
 		<GenerateDefaultConfigFile>true</GenerateDefaultConfigFile>
 		<SignAssembly>True</SignAssembly>

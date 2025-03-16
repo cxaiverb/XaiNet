@@ -149,6 +149,12 @@ namespace XaiNet2
             this.Close();
             Owner.Show();
         }
+        private void CancelOptions_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("Closed options without saving.");
+            Close();
+            Owner.Show();
+        }
         private void Window_Deactivated(object sender, EventArgs e)
         {
             this.Hide();

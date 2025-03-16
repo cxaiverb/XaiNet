@@ -651,7 +651,7 @@ namespace NetworkTrayApp
         {
             if (!isPinned)
             {
-                this.Hide(); // Hides the window when clicking outside unless pinned
+                Hide(); // Hides the window when clicking outside unless pinned
             }
         }
 

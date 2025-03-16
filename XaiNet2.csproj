@@ -7,7 +7,8 @@
 		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 		<UseWindowsForms>true</UseWindowsForms>
 		<GenerateDefaultConfigFile>true</GenerateDefaultConfigFile>
-		<SignAssembly>True</SignAssembly>
+		<SignAssembly>true</SignAssembly>
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 	</PropertyGroup>
 
 

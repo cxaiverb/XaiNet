@@ -58,8 +58,13 @@
             <Button Content="Save" Click="SaveOptions_Click"
                 Background="Gray" Foreground="White" 
                 Margin="5,10,5,10" Height="30" Width="100"
-                HorizontalAlignment="Center"
+                HorizontalAlignment="Left"
                 Grid.Row="1"/>
+            <Button Content="Cancel" Click="CancelOptions_Click"
+                    Background="Gray" Foreground="White"
+                    Margin="5,10,5,10" Height="30" Width="100"
+                    HorizontalAlignment="Right"
+                    Grid.Row="1"/>
             <!-- Pinned at the bottom -->
         </Grid>
     </Border>

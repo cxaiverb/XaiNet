@@ -49,8 +49,14 @@
                         <StackPanel Margin="10">
                             <CheckBox Content="Enable Auto-Start" Name="AutoStartCheckBox" Foreground="White" />
                             <CheckBox Content="Enable Myrkur Mode" Name="MyrkurModeCheckBox" Foreground="White"/>
+                            <ComboBox>
+                                <ComboBoxItem IsSelected="True">Select Main Wireless Adapter</ComboBoxItem>
+                                <ComboBoxItem>Wireless adapter whatever bullshit name</ComboBoxItem>
+                                <ComboBoxItem>another one</ComboBoxItem>
+                            </ComboBox>
                         </StackPanel>
                     </Expander>
+
                 </StackPanel>
             </ScrollViewer>
 

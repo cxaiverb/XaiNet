@@ -21,6 +21,7 @@ using ManagedNativeWifi;
 using System.Security.Cryptography.X509Certificates;
 using System.Windows.Controls;
 using Windows.Devices.WiFi;
+using System.Threading.Tasks;
 
 namespace NetworkTrayApp
 {
@@ -81,6 +82,7 @@ namespace NetworkTrayApp
         static void IconSelector(Object source, System.Timers.ElapsedEventArgs e)
         {
             string iconName = "no-network-w"; // Default to no network
+            int ConnectionStrength = 0;
 
             if (HasInternet())
             {
@@ -105,7 +107,39 @@ namespace NetworkTrayApp
                 // Prioritize Wi-Fi over Ethernet if both are available
                 if (activeWiFi != null)
                 {
-                    iconName = "wi-fi-w";
+                    // Get Signal Strength
+                    ConnectionStrength = GetWiFiSignalStrength();
+                    Debug.WriteLine($"Wi-Fi Signal Strength: {ConnectionStrength}dBm");
+
+                    if (ConnectionStrength <= -91)
+                    {
+                        iconName = "wi-fi-full";
+                        Debug.WriteLine("Set icon to full");
+                    }
+                    else if (ConnectionStrength <= -75)
+                    {
+                        iconName = "wi-fi-4";
+                        Debug.WriteLine("Set icon to 4 bars");
+
+                    }
+                    else if (ConnectionStrength <= -55)
+                    {
+                        iconName = "wi-fi-3";
+                        Debug.WriteLine("Set icon to 3 bars");
+
+                    }
+                    else if (ConnectionStrength <= -30)
+                    {
+                        iconName = "wi-fi-2";
+                        Debug.WriteLine("Set icon to 2 bars");
+
+                    }
+                    else if (ConnectionStrength <= -1)
+                    {
+                        iconName = "wi-fi-1";
+                        Debug.WriteLine("Set icon to 1 bar");
+
+                    }
                 }
                 else if (activeEthernet != null)
                 {
@@ -259,6 +293,52 @@ namespace NetworkTrayApp
                 }
             }
         }
+        private static int GetWiFiSignalStrength()
+        {
+            try
+            {
+                string connectedSSID = GetConnectedWiFiSSID();
+                if (string.IsNullOrEmpty(connectedSSID)) return 0; // No connection
+
+                var wifiNetworks = NativeWifi.EnumerateBssNetworks()
+                    .Where(network => network.Ssid.ToString() == connectedSSID)
+                    .ToList();
+
+                if (wifiNetworks.Any())
+                {
+                    return wifiNetworks.First().SignalStrength; // Return signal strength percentage
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting Wi-Fi signal strength: {ex.Message}");
+            }
+
+            return 0; // Default to 0 if unable to retrieve
+        }
+
+
+        private static string GetConnectedWiFiSSID()
+        {
+            try
+            {
+                var activeConnection = NativeWifi.EnumerateInterfaceConnections()
+                    .FirstOrDefault(); // Get the first active connection
+
+                if (activeConnection != null)
+                {
+                    return activeConnection.ProfileName; // SSID of the connected network
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting connected Wi-Fi SSID: {ex.Message}");
+            }
+
+            return string.Empty; // Return empty if not connected
+        }
+
+
 
         private Dictionary<string, (long PrevSent, long PrevRecv)> previousData = new();
         private Dictionary<string, (long SentSpeed, long ReceiveSpeed)> GetNetworkSpeeds()
@@ -488,7 +568,7 @@ namespace NetworkTrayApp
             public string Encryption { get; set; }
             public string SignalStrength { get; set; }
         }
-
+        
         private void LoadWiFiNetworks()
         {
             List<WiFiNetwork> networks = new List<WiFiNetwork>();
@@ -520,7 +600,10 @@ namespace NetworkTrayApp
             // Update UI safely
             Dispatcher.Invoke(() => WiFiNetworkList.ItemsSource = networks);
         }
-
+        public static Task RefreshAsync()
+        {
+            return NativeWifi.ScanNetworksAsync(timeout: TimeSpan.FromSeconds(10));
+        }
         private void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Forms.Button button && button.Tag is string ssid)

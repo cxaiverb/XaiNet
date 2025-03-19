@@ -148,6 +148,9 @@
   <data name="wi-fi-full" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\wifi\wi-fi-full.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="wifi-menu" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\wifi-menu.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="wifi-vpn" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\wifi\wifi-vpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

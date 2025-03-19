@@ -171,6 +171,32 @@ namespace NetworkTrayApp
                 };
             }
 
+            string wifiIcon = "wi-fi-full";
+
+            var wifiIco = LoadImageFromResources(wifiIcon);
+
+            if (wifiIco != null)
+            {
+                WifiButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = wifiIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
+            string vpnIcon = "openvpn";
+
+            var vpnIco = LoadImageFromResources(vpnIcon);
+
+            if (vpnIco != null)
+            {
+                VPNButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = vpnIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
             string defaultIcon = "pin-outline";
             
             var defaultImage = LoadImageFromResources(defaultIcon);
@@ -676,6 +702,19 @@ namespace NetworkTrayApp
             optionsWindow.ShowDialog();
         }
 
+        private void WifiButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("Wireless button clicked");
+            WirelessWindow wirelessWindow = new WirelessWindow(this);
+            wirelessWindow.ShowDialog();
+        }
+
+        private void VPNButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("VPN button clicked");
+            VPNWindow vpnWindow = new VPNWindow(this);
+            vpnWindow.ShowDialog();
+        }
 
         private void PositionWindowNearTray()
         {

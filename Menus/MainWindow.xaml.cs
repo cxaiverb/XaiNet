@@ -47,16 +47,7 @@ namespace NetworkTrayApp
             this.Loaded += OnLoaded;
 
 
-            if (!HasWiFiAdapter())
-            {
-                NoWiFiTextBlock.Visibility = Visibility.Visible;
-                Debug.WriteLine("Wireless adapter not found :(");
-                return;
-            }
 
-            NoWiFiTextBlock.Visibility = Visibility.Collapsed;
-
-            LoadWiFiNetworks();
         }
 
         static bool HasInternet()
@@ -580,72 +571,7 @@ namespace NetworkTrayApp
 
             return string.IsNullOrEmpty(info) ? "No active network adapters found." : info;
         }
-        private bool HasWiFiAdapter()
-        {
-            return NetworkInterface.GetAllNetworkInterfaces()
-                .Any(nic => nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211);
-        }
-        public class WiFiNetwork
-        {
-            public string SSID { get; set; }
-            public string BSSID { get; set; }
-            public string NetworkType { get; set; }
-            public string Authentication { get; set; }
-            public string Encryption { get; set; }
-            public string SignalStrength { get; set; }
-        }
-        
-        private void LoadWiFiNetworks()
-        {
-            List<WiFiNetwork> networks = new List<WiFiNetwork>();
 
-            try
-            {
-                // Get all available Wi-Fi networks
-                var availableNetworks = NativeWifi.EnumerateBssNetworks()
-                    .GroupBy(n => n.Ssid.ToString()) // Group by SSID to remove duplicates
-                    .Select(g => g.First()) // Pick the first from each group
-                    .ToList();
-
-                foreach (var network in availableNetworks)
-                {
-                    networks.Add(new WiFiNetwork
-                    {
-                        SSID = network.Ssid.ToString(),
-                        SignalStrength = $"{network.SignalStrength}%", // Signal strength
-                        Authentication = network.Interface.ToString(),
-                        Encryption = network.PhyType.ToString()
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error scanning Wi-Fi: {ex.Message}");
-            }
-
-            // Update UI safely
-            Dispatcher.Invoke(() => WiFiNetworkList.ItemsSource = networks);
-        }
-        public static Task RefreshAsync()
-        {
-            return NativeWifi.ScanNetworksAsync(timeout: TimeSpan.FromSeconds(10));
-        }
-        private void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is System.Windows.Forms.Button button && button.Tag is string ssid)
-            {
-                Debug.WriteLine($"Attempting to connect to {ssid}");
-
-                try
-                {
-                    Debug.WriteLine($"Connected to {ssid}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error connecting to Wi-Fi: {ex.Message}");
-                }
-            }
-        }
 
 
 

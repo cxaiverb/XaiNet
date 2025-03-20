@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using XaiNet2.Menus;
 
 namespace XaiNet2 
 { 
@@ -23,6 +24,10 @@ namespace XaiNet2
             InitializeComponent();
             this.Owner = owner;
             PositionNearMainWindow(owner);
+
+            bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
+            this.SetMyrkurMode(myrkurModeEnabled);
+
         }
         private void PositionNearMainWindow(MainWindow owner)
         {
@@ -36,5 +41,12 @@ namespace XaiNet2
         {
             this.Hide();
         }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            WindowHelper.ApplyBlurEffect(this);
+        }
+
+
     }
 }

@@ -15,6 +15,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using XaiNet2.Menus;
 
 namespace XaiNet2
 {
@@ -35,6 +36,9 @@ namespace XaiNet2
             NoWiFiTextBlock.Visibility = Visibility.Collapsed;
 
             LoadWiFiNetworks();
+
+            bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
+            this.SetMyrkurMode(myrkurModeEnabled);
         }
         private bool HasWiFiAdapter()
         {
@@ -115,6 +119,12 @@ namespace XaiNet2
                 }
             }
         }
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            WindowHelper.ApplyBlurEffect(this);
+        }
+
+
         private void RefreshWiFi_Click(object sender, RoutedEventArgs e)
         {
             LoadWiFiNetworks();

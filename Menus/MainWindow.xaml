@@ -11,6 +11,7 @@
         WindowStyle="None"
         ResizeMode="NoResize"
         Topmost="True"
+        Loaded="Window_Loaded"
         Deactivated="Window_Deactivated">
 
 <Window.Resources>
@@ -21,22 +22,24 @@
     </ResourceDictionary>
 </Window.Resources>
 
+    <Grid>
+        <Border x:Name="BlurredBackground" Background="#55000000" CornerRadius="10"/>
+        <Border CornerRadius="10" Background="#AA222222" Padding="10">
 
-    <Border CornerRadius="10" Background="#AA222222" Padding="10">
-        <Grid>
-            <TextBlock Text="Network Info" Foreground="White" FontSize="16" Margin="0,0,0,10"/>
-            <Grid VerticalAlignment="Top" HorizontalAlignment="Right" ShowGridLines="True">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="auto"></ColumnDefinition>
-                    <ColumnDefinition Width="auto"></ColumnDefinition>
-                    <ColumnDefinition Width="auto"></ColumnDefinition>
-                    <ColumnDefinition Width="auto"></ColumnDefinition>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="auto"></RowDefinition>
-                </Grid.RowDefinitions>
-                <!-- Pin Button -->
-                <Button Name="PinButton" Width="32" Height="32"
+            <Grid>
+                <TextBlock Text="Network Info" Foreground="White" FontSize="16" Margin="0,0,0,10"/>
+                <Grid VerticalAlignment="Top" HorizontalAlignment="Right" ShowGridLines="True">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"></ColumnDefinition>
+                        <ColumnDefinition Width="auto"></ColumnDefinition>
+                        <ColumnDefinition Width="auto"></ColumnDefinition>
+                        <ColumnDefinition Width="auto"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <!-- Pin Button -->
+                    <Button Name="PinButton" Width="32" Height="32"
                 Background="Transparent" Foreground="White" 
                 BorderThickness="0" Cursor="Hand"
                 Click="PinButton_Click"
@@ -44,17 +47,17 @@
                 Grid.Row="0"
                 ToolTip="Pins window to the top"/>
 
-                <!-- Options Button -->
-                <Button x:Name="OptionsButton" Width="32" Height="32"
+                    <!-- Options Button -->
+                    <Button x:Name="OptionsButton" Width="32" Height="32"
                 Background="Transparent" Foreground="White"
                 BorderThickness="0" Cursor="Hand" 
                 Click="OptionsButton_Click"
                 Grid.Column="2"
                 Grid.Row="0"
                 ToolTip="Options Menu"/>
-                
-                <!-- Wireless Networks Button -->
-                <Button x:Name="WifiButton" Width="32" Height="32"
+
+                    <!-- Wireless Networks Button -->
+                    <Button x:Name="WifiButton" Width="32" Height="32"
                 Background="Transparent" Foreground="White"
                 BorderThickness="0" Cursor="Hand"
                 Click="WifiButton_Click"
@@ -62,8 +65,8 @@
                 Grid.Row="0"
                 ToolTip="WiFi Menu"/>
 
-                <!-- OpenVPN Button -->
-                <Button x:Name="VPNButton" Width="32" Height="32"
+                    <!-- OpenVPN Button -->
+                    <Button x:Name="VPNButton" Width="32" Height="32"
                 Background="Transparent" Foreground="White"
                 BorderThickness="0" Cursor="Hand"
                 Click="VPNButton_Click"
@@ -71,24 +74,24 @@
                 Grid.Row="0"
                 ToolTip="OpenVPN Menu"/>
 
-            </Grid>
-            <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
-                <ScrollViewer.Resources>
-                    <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
-                </ScrollViewer.Resources>
-                <StackPanel>
-                    <ItemsControl Name="NetworkList">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Expander Header="{Binding Name}" Foreground="White" FontSize="14" Margin="5">
-                                    <Expander.Resources>
-                                        <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
-                                    </Expander.Resources>
-                                    <StackPanel Margin="10,0,0,0">
-                                        <TabControl Background="Transparent" HorizontalAlignment="Center">
-                                            <TabItem Header="Speed" Width="140">
-                                                <StackPanel>
-                                                    <lvc:CartesianChart Series="{Binding Series}" Height="150" Margin="0,0,0,0"
+                </Grid>
+                <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
+                    </ScrollViewer.Resources>
+                    <StackPanel>
+                        <ItemsControl Name="NetworkList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Expander Header="{Binding Name}" Foreground="White" FontSize="14" Margin="5">
+                                        <Expander.Resources>
+                                            <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
+                                        </Expander.Resources>
+                                        <StackPanel Margin="10,0,0,0">
+                                            <TabControl Background="Transparent" HorizontalAlignment="Center">
+                                                <TabItem Header="Speed" Width="140">
+                                                    <StackPanel>
+                                                        <lvc:CartesianChart Series="{Binding Series}" Height="150" Margin="0,0,0,0"
                                                                     YAxes="{Binding YAxes}"
                                                                     XAxes="{Binding XAxes}"
                                                                     TooltipPosition="Top"
@@ -97,27 +100,28 @@
                                                                     TooltipTextSize="14"
                                                                     FindingStrategy="CompareOnlyX"                                                                   
                                                                     />
-                                                </StackPanel>
-                                            </TabItem>
-                                            <TabItem Header="Details" Width="140">
-                                                <StackPanel Margin="10,0,0,0">
-                                                    <TextBlock Text="{Binding Type}" Foreground="LightGray"/>
-                                                    <TextBlock Text="{Binding Status}" Foreground="LightGray"/>
-                                                    <TextBlock Text="{Binding IPAddress}" Foreground="LightGray"/>
-                                                    <TextBlock Text="{Binding Speed}" Foreground="LightGray"/>
-                                                    <TextBlock Text="{Binding SentSpeed}" Foreground="LightGray"/>
-                                                    <TextBlock Text="{Binding ReceiveSpeed}" Foreground="LightGray"/>
-                                                </StackPanel>
-                                            </TabItem>
-                                        </TabControl>
-                                    </StackPanel>
-                                </Expander>
-                        </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                                    </StackPanel>
+                                                </TabItem>
+                                                <TabItem Header="Details" Width="140">
+                                                    <StackPanel Margin="10,0,0,0">
+                                                        <TextBlock Text="{Binding Type}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding Status}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding IPAddress}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding Speed}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding SentSpeed}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding ReceiveSpeed}" Foreground="LightGray"/>
+                                                    </StackPanel>
+                                                </TabItem>
+                                            </TabControl>
+                                        </StackPanel>
+                                    </Expander>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
-    </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

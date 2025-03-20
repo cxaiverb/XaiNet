@@ -18,10 +18,7 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView;
 using SkiaSharp;
 using ManagedNativeWifi;
-using System.Security.Cryptography.X509Certificates;
-using System.Windows.Controls;
-using Windows.Devices.WiFi;
-using System.Threading.Tasks;
+using XaiNet2.Menus;
 
 namespace NetworkTrayApp
 {
@@ -46,7 +43,8 @@ namespace NetworkTrayApp
 
             this.Loaded += OnLoaded;
 
-
+            bool myrkurModeEnabled = XaiNet2.Properties.Settings.Default.MyrkurMode;
+            this.SetMyrkurMode(myrkurModeEnabled);
 
         }
 
@@ -571,6 +569,15 @@ namespace NetworkTrayApp
 
             return string.IsNullOrEmpty(info) ? "No active network adapters found." : info;
         }
+
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            WindowHelper.ApplyBlurEffect(this);
+        }
+
+
+
 
 
 

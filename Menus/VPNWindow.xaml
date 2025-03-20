@@ -8,6 +8,7 @@
         ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
+        Loaded="Window_Loaded"
         Deactivated="Window_Deactivated">
 
     <Window.Resources>

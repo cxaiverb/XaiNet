@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Microsoft.Win32;
 using System.Windows.Media.Animation;
+using XaiNet2.Menus;
 
 namespace XaiNet2
 {
@@ -37,10 +38,16 @@ namespace XaiNet2
             // Load Myrkur Mode state
             bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
             MyrkurModeCheckBox.IsChecked = myrkurModeEnabled;
-
             // Apply Myrkur Mode to Options Window
-            SetMyrkurMode(myrkurModeEnabled);
+            this.SetMyrkurMode(myrkurModeEnabled);
+
         }
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            WindowHelper.ApplyBlurEffect(this);
+        }
+
+
 
         private void PositionNearMainWindow(MainWindow owner)
         {
@@ -108,19 +115,7 @@ namespace XaiNet2
                 Debug.WriteLine($"Error updating Auto-Start: {ex.Message}");
             }
         }
-        public void SetMyrkurMode(bool enable)
-        {
-            if (enable)
-            {
-                this.FontFamily = new System.Windows.Media.FontFamily("Comic Sans MS");
-                Debug.WriteLine("Enabled MyrkurMode");
-            }
-            else
-            {
-                this.FontFamily = new System.Windows.Media.FontFamily("Segoe UI"); // Default font
-                Debug.WriteLine("Disabled MyrkurMode");
-            }
-        }
+
 
         private void SaveOptions_Click(object sender, RoutedEventArgs e)
         {
@@ -141,12 +136,16 @@ namespace XaiNet2
             // Apply Myrkur Mode to all windows
             bool myrkurMode = MyrkurModeCheckBox.IsChecked == true;
             Properties.Settings.Default.MyrkurMode = myrkurMode;
+
+            
+            foreach (Window window in Application.Current.Windows)
+            {
+                window.SetMyrkurMode(myrkurMode);
+            }
+
             Properties.Settings.Default.Save();
 
-            // Apply Myrkur Mode to MainWindow too
-            ((MainWindow)Owner).SetMyrkurMode(myrkurMode);
-
-            this.Close();
+            this.Hide();
             Owner.Show();
         }
         private void CancelOptions_Click(object sender, RoutedEventArgs e)

@@ -14,14 +14,6 @@ namespace XaiNet2.Menus
 {
     public class WindowHelper
     {
-        /*public static void PositionNearMainWindow(System.Windows.Window window, System.Windows.Window owner)
-        {
-            // Get position from owner
-            window.Left = owner.Left;
-            window.Top = owner.Top;
-            window.Width = owner.Width;
-            window.Height = owner.Height;
-        }*/
 
         public static void ApplyBlurEffect(Window window)
         {
@@ -30,10 +22,10 @@ namespace XaiNet2.Menus
                 var windowHelper = new WindowInteropHelper(window);
                 var accent = new AccentPolicy
                 {
-                    AccentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND,
+                    AccentState = AccentState.ACCENT_ENABLE_BLURBEHIND
                     //GradientColor = (38 << 24) | 0x222222
                 };
-                accent.GradientColor = Color.FromArgb(38, 34, 34, 34).ToArgb();
+                //accent.GradientColor = Color.FromArgb(30, 255, 255, 0).ToArgb();
                 Debug.WriteLine($"GradientColor: {accent.GradientColor}");
                 int size = Marshal.SizeOf(accent);
                 IntPtr accentPtr = Marshal.AllocHGlobal(size);

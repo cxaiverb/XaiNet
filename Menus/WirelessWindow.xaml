@@ -29,13 +29,13 @@
                 <StackPanel>
                     <Grid VerticalAlignment="Top" HorizontalAlignment="Left" ShowGridLines="True">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="auto"></ColumnDefinition>
-                            <ColumnDefinition Width="auto"></ColumnDefinition>
-                            <ColumnDefinition Width="auto"></ColumnDefinition>
-                            <ColumnDefinition Width="auto"></ColumnDefinition>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"></RowDefinition>
+                            <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
                         
                         <Button Name="HomeButton" Click="HomeButton_Click"
@@ -50,11 +50,18 @@
                                 BorderThickness="0" Cursor="Hand"
                                 Grid.Column="1"
                                 Grid.Row="0"/>
-                        
+                        <Button Name="PinButton" Click="PinButton_Click"
+                                Width="32" Height="32"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Grid.Column="2"
+                                Grid.Row="0"/>
+
                         <TextBlock Text="Wi-Fi Networks" Foreground="White" 
                                    FontSize="16"
-                                   Grid.Column="2"
-                                   Grid.Row="0"/>
+                                   Grid.Column="3"
+                                   Grid.Row="0"
+                                   VerticalAlignment="Center"/>
                     </Grid>
                     <StackPanel Name="AvailableNetworks">
                         <StackPanel Name="AvailableNetworksPanel" Margin="10">
@@ -63,21 +70,23 @@
                         <ItemsControl Name="WiFiNetworkList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Expander Header="{Binding SSID}" Foreground="White" FontSize="14" Margin="5">
-                                        <Expander.Resources>
-                                            <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
-                                        </Expander.Resources>
-                                        <StackPanel Margin="10,0,0,0">
-                                            <TextBlock Text="{Binding NetworkType}" Foreground="LightGray"/>
-                                            <TextBlock Text="{Binding Authentication}" Foreground="LightGray"/>
-                                            <TextBlock Text="{Binding Encryption}" Foreground="LightGray"/>
-                                            <TextBlock Text="{Binding SignalStrength}" Foreground="LightGray"/>
-                                            <Button Content="Connect" Click="ConnectToWiFi_Click"
-                                    Tag="{Binding SSID}" 
-                                    Background="Gray" Foreground="White" 
-                                    Width="80" Margin="0,5,0,0"/>
-                                        </StackPanel>
-                                    </Expander>
+                                    <Grid ShowGridLines="True" VerticalAlignment="Top" HorizontalAlignment="Left">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="{Binding SSID}" Foreground="White" FontSize="14" Margin="5" Grid.Column="2" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SignalStrength}" Foreground="LightGray" Margin="5" Grid.Column="1" VerticalAlignment="Center"/>
+                                        <Button Content="Connect" Click="ConnectToWiFi_Click"
+                                                Tag="{Binding SSID}" 
+                                                Background="Gray" Foreground="White" 
+                                                HorizontalAlignment="Right"
+                                                Width="80" Margin="5,0,0,0" Grid.Column="0"/>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

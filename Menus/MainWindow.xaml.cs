@@ -100,34 +100,32 @@ namespace NetworkTrayApp
                     ConnectionStrength = GetWiFiSignalStrength();
                     Debug.WriteLine($"Wi-Fi Signal Strength: {ConnectionStrength}dBm");
 
-                    if (ConnectionStrength <= -91)
+                    if (ConnectionStrength <= -100)
                     {
-                        iconName = "wi-fi-full";
-                        Debug.WriteLine("Set icon to full");
-                    }
-                    else if (ConnectionStrength <= -75)
-                    {
-                        iconName = "wi-fi-4";
-                        Debug.WriteLine("Set icon to 4 bars");
+                        iconName = "wi-fi-1";
+                        Debug.WriteLine("Set icon to 1 bar");
 
                     }
-                    else if (ConnectionStrength <= -55)
+                    else if (ConnectionStrength <= -80)
+                    {
+                        iconName = "wi-fi-2";
+                        Debug.WriteLine("Set icon to 2 bars");
+                    }
+                    else if (ConnectionStrength <= -70)
                     {
                         iconName = "wi-fi-3";
                         Debug.WriteLine("Set icon to 3 bars");
 
                     }
-                    else if (ConnectionStrength <= -30)
+                    else if (ConnectionStrength <= -60)
                     {
-                        iconName = "wi-fi-2";
-                        Debug.WriteLine("Set icon to 2 bars");
-
+                        iconName = "wi-fi-4";
+                        Debug.WriteLine("Set icon to 4 bars");
                     }
-                    else if (ConnectionStrength <= -1)
+                    else if (ConnectionStrength <= -50)
                     {
-                        iconName = "wi-fi-1";
-                        Debug.WriteLine("Set icon to 1 bar");
-
+                        iconName = "wi-fi-full";
+                        Debug.WriteLine("Set icon to full");
                     }
                 }
                 else if (activeEthernet != null)

@@ -38,13 +38,13 @@
                             <RowDefinition Height="auto"></RowDefinition>
                         </Grid.RowDefinitions>
                         
-                        <Button Name="Home" Content="Home" Click="HomeButton_Click"
+                        <Button Name="HomeButton" Click="HomeButton_Click"
                                 Width="32" Height="32"
                                 Background="Transparent" Foreground="White"
                                 BorderThickness="0" Cursor="Hand"
                                 Grid.Column="0"
                                 Grid.Row="0"/>
-                        <Button Name="RefreshButton" Content="Refresh" Click="RefreshWiFi_Click"
+                        <Button Name="RefreshButton" Click="RefreshWiFi_Click"
                                 Width="32" Height="32"
                                 Background="Transparent" Foreground="White"
                                 BorderThickness="0" Cursor="Hand"

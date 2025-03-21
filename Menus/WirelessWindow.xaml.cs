@@ -36,10 +36,39 @@ namespace XaiNet2
             NoWiFiTextBlock.Visibility = Visibility.Collapsed;
 
             LoadWiFiNetworks();
-
+            this.Loaded += OnLoaded;
             bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
             this.SetMyrkurMode(myrkurModeEnabled);
         }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            string homeIcon = "home";
+            var homeIco = ImageLoader.LoadImageFromResources(homeIcon);
+
+            if (homeIco != null)
+            {
+                HomeButton.Content = new Image
+                {
+                    Source = homeIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
+            string refreshIcon = "refresh";
+            var refreshIco = ImageLoader.LoadImageFromResources(refreshIcon);
+
+            if (refreshIco != null)
+            {
+                RefreshButton.Content = new Image
+                {
+                    Source = refreshIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
+        }
+
         private bool HasWiFiAdapter()
         {
             return NetworkInterface.GetAllNetworkInterfaces()
@@ -103,6 +132,7 @@ namespace XaiNet2
         {
             return NativeWifi.ScanNetworksAsync(timeout: TimeSpan.FromSeconds(10));
         }
+
         private void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Forms.Button button && button.Tag is string ssid)

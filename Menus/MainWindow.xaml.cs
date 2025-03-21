@@ -148,7 +148,7 @@ namespace NetworkTrayApp
 
             string optionsIcon = "options";
 
-            var optionsIco = LoadImageFromResources(optionsIcon);
+            var optionsIco = ImageLoader.LoadImageFromResources(optionsIcon);
 
             if (optionsIco != null)
             {
@@ -162,7 +162,7 @@ namespace NetworkTrayApp
 
             string wifiIcon = "wi-fi-full";
 
-            var wifiIco = LoadImageFromResources(wifiIcon);
+            var wifiIco = ImageLoader.LoadImageFromResources(wifiIcon);
 
             if (wifiIco != null)
             {
@@ -175,7 +175,7 @@ namespace NetworkTrayApp
             }
             string vpnIcon = "openvpn";
 
-            var vpnIco = LoadImageFromResources(vpnIcon);
+            var vpnIco = ImageLoader.LoadImageFromResources(vpnIcon);
 
             if (vpnIco != null)
             {
@@ -188,7 +188,7 @@ namespace NetworkTrayApp
             }
             string defaultIcon = "pin-outline";
             
-            var defaultImage = LoadImageFromResources(defaultIcon);
+            var defaultImage = ImageLoader.LoadImageFromResources(defaultIcon);
 
             if (defaultImage != null)
             {
@@ -615,7 +615,7 @@ namespace NetworkTrayApp
 
             string iconName = isPinned ? "pin-solid" : "pin-outline";
 
-            var newIcon = LoadImageFromResources(iconName);
+            var newIcon = ImageLoader.LoadImageFromResources(iconName);
 
             if (newIcon != null)
             {
@@ -654,38 +654,6 @@ namespace NetworkTrayApp
             var screen = System.Windows.SystemParameters.WorkArea;
             this.Left = screen.Right - this.Width - 10;
             this.Top = screen.Bottom - this.Height - 10;
-        }
-        private static System.Windows.Media.Imaging.BitmapImage LoadImageFromResources(string resourceName)
-        {
-            object resource = XaiNet2.Properties.Resources.ResourceManager.GetObject(resourceName);
-
-            if (resource == null)
-            {
-                return null;
-            }
-
-            try
-            {
-                if (resource is byte[] imageBytes) // WPF stores .ico as byte[]
-                {
-                    using (MemoryStream memory = new MemoryStream(imageBytes))
-                    {
-                        var bitmapImage = new System.Windows.Media.Imaging.BitmapImage();
-                        bitmapImage.BeginInit();
-                        bitmapImage.StreamSource = memory;
-                        bitmapImage.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                        bitmapImage.EndInit();
-
-                        return bitmapImage;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error loading image '{resourceName}': {ex.Message}");
-            }
-
-            return null;
         }
 
         public void SetMyrkurMode(bool enable)

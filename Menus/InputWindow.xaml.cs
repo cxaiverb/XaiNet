@@ -45,17 +45,19 @@ namespace XaiNet2.Menus
             {
                 return null;
             }
+            Debug.WriteLine($"Password sent to profile template: {pwdBox.Password}");
             return pwdBox.Password;
         }
         private void SubmitButton_Click(object sender, RoutedEventArgs e)
         {
             Debug.WriteLine($"Submit button clicked");
             string userPass = pwdBox.Password.ToString();
-            this.Close();
+            Debug.WriteLine($"Password saved: {userPass}");
+            this.Hide();
         }
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            this.Close();
+            this.Hide();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)

@@ -50,16 +50,10 @@
                                 BorderThickness="0" Cursor="Hand"
                                 Grid.Column="1"
                                 Grid.Row="0"/>
-                        <Button Name="PinButton" Click="PinButton_Click"
-                                Width="32" Height="32"
-                                Background="Transparent" Foreground="White"
-                                BorderThickness="0" Cursor="Hand"
-                                Grid.Column="2"
-                                Grid.Row="0"/>
 
                         <TextBlock Text="Wi-Fi Networks" Foreground="White" 
                                    FontSize="16"
-                                   Grid.Column="3"
+                                   Grid.Column="2"
                                    Grid.Row="0"
                                    VerticalAlignment="Center"/>
                     </Grid>

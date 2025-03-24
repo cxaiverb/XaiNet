@@ -143,39 +143,42 @@ namespace XaiNet2
             {
                 return;
             }
+            // Get the raw SSID from the button tag without the lock
+            string rawSsid = ssid.Replace("🔒 ", "");
 
             var selectedNetwork = NativeWifi.EnumerateAvailableNetworks()
-                .FirstOrDefault(n => n.Ssid.ToString() == ssid);
+                .FirstOrDefault(n => n.Ssid.ToString() == rawSsid);
 
-            Debug.WriteLine($"Attempting to connect to {ssid}");
+            Debug.WriteLine($"Attempting to connect to {rawSsid}");
             InputWindow inputWindow;
-
-            if (selectedNetwork.IsSecurityEnabled == false)
+            string password = "";
+            if (selectedNetwork.IsSecurityEnabled != false)
             {
                 Debug.WriteLine("Popup user input window");
                 inputWindow = new InputWindow(this);
-                string password = inputWindow.GetPassword();
-                string passwordRequired = password.Length > 0 ? "true" : "false";
                 inputWindow.ShowDialog();
+
+                password = inputWindow.GetPassword();
             }
             else
             {
                 Debug.WriteLine($"connect to open network");
             }
 
-            // Get the raw SSID from the button tag without the lock
-            string rawSsid = ssid.Replace("🔒 ", "");
-
             var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
-            string assword;
+            Debug.WriteLine($"Password used is: {password}");
+            string authentication = selectedNetwork.AuthenticationAlgorithm.ToString();
+            if (authentication == "Open") authentication = "open";
+            if (authentication == "RSNA_PSK") authentication = "WPA2PSK";
+            string encryption = selectedNetwork.CipherAlgorithm.ToString();
+            if (encryption == "None") encryption = "none";
+            if (encryption == "CCMP") encryption = "AES";
             string profileName = rawSsid;
             Debug.WriteLine($"Profile name: {profileName}");
             byte[] bytes = Encoding.UTF8.GetBytes(rawSsid);
             Debug.WriteLine($"SSID bytes: {BitConverter.ToString(bytes)}");
             string hexSSID = Convert.ToHexString(bytes);
             Debug.WriteLine($"Hex SSID: {hexSSID}");
-            hexSSID = hexSSID.Replace("-", "");
-            Debug.WriteLine($"Hex SSID (cleaned): {hexSSID}");
             string profileTemplate = "<?xml version=\"1.0\"?>\r\n" +
                 "<WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\">\r\n    " +
                 $"<name>{rawSsid}</name>\r\n    " +
@@ -190,13 +193,13 @@ namespace XaiNet2
                 "<MSM>\r\n        " +
                 "<security>\r\n            " +
                 "<authEncryption>\r\n                " +
-                "<authentication>WPA2PSK</authentication>\r\n                " +
-                $"<encryption>AES</encryption>\r\n                " +
+                $"<authentication>{authentication}</authentication>\r\n                " +
+                $"<encryption>{encryption}</encryption>\r\n                " +
                 "<useOneX>false</useOneX>\r\n            " +
                 "</authEncryption>\r\n            " +
                 "<sharedKey>\r\n                " +
                 "<keyType>passPhrase</keyType>\r\n                " +
-                $"<protected>{passwordRequired}</protected>\r\n                " +
+                "<protected>false</protected>\r\n                " +
                 $"<keyMaterial>{password}</keyMaterial>\r\n            " +
                 "</sharedKey>\r\n        " +
                 "</security>\r\n    " +
@@ -232,35 +235,9 @@ namespace XaiNet2
             }
         }
         
-
-        // temp pin while testing shit
-
-        private bool isPinned = false;
-        private void PinButton_Click(object sender, RoutedEventArgs e)
-        {
-            isPinned = !isPinned; // Toggle state
-            Topmost = isPinned;   // Keep window on top when pinned
-
-            string iconName = isPinned ? "pin-solid" : "pin-outline";
-
-            var newIcon = ImageLoader.LoadImageFromResources(iconName);
-
-            if (newIcon != null)
-            {
-                PinButton.Content = new System.Windows.Controls.Image
-                {
-                    Source = newIcon,
-                    Width = 16,
-                    Height = 16
-                };
-            }
-        }
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            if (!isPinned)
-            {
-                Hide(); // Hides the window when clicking outside unless pinned
-            }
+            Hide();
         }
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -274,7 +251,7 @@ namespace XaiNet2
         }
         private void HomeButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            Close();
             Owner.Show();
         }
 

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +16,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Windows.Networking.Connectivity;
 using XaiNet2.Menus;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
@@ -89,11 +91,10 @@ namespace XaiNet2
         {
             public string SSID { get; set; }
             public string Authentication { get; set; }
-            public string Encryption { get; set; }
             public string SignalStrength { get; set; }
         }
 
-        private void LoadWiFiNetworks()
+        public void LoadWiFiNetworks()
         {
             List<WiFiNetwork> networks = new List<WiFiNetwork>();
 
@@ -138,61 +139,99 @@ namespace XaiNet2
 
         private void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is string ssid)
+            if (sender is not Button button || button.Tag is not string ssid)
             {
-                Debug.WriteLine($"Attempting to connect to {ssid}");
+                return;
+            }
 
-                try
-                {
-                    string encryption = "None";
-                    /* if (AuthenticationAlgorithm = "Open") // fix later
-                    {
-                        string encryption = "None";
-                    }
-                    else
-                    {
-                        string encryption = "AES";
-                    } */
-                    byte[] bytes = Encoding.UTF8.GetBytes(ssid);
-                    string hexSSID = Convert.ToHexString(bytes);
-                    string password = ""; // TODO: Get password from user input
-                    string passwordRequired = password.Length > 0 ? "true" : "false";
-                    string profileTemplate = "<?xml version=\"1.0\"?>\r\n" +
-                        "<WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\">\r\n    " +
-                        $"<name>{ssid}</name>\r\n    " +
-                        "<SSIDConfig>\r\n        " +
-                        "<SSID>\r\n            " +
-                        $"<hex>{hexSSID}</hex>\r\n            " +
-                        $"<name>{ssid}</name>\r\n        " +
-                        "</SSID>\r\n    " +
-                        "</SSIDConfig>\r\n    " +
-                        "<connectionType>ESS</connectionType>\r\n    " +
-                        "<connectionMode>auto</connectionMode>\r\n    " +
-                        "<MSM>\r\n        " +
-                        "<security>\r\n            " +
-                        "<authEncryption>\r\n                " +
-                        "<authentication>WPA2</authentication>\r\n                " +
-                        $"<encryption>{encryption}</encryption>\r\n                " +
-                        "<useOneX>false</useOneX>\r\n            " +
-                        "</authEncryption>\r\n            " +
-                        "<sharedKey>\r\n                " +
-                        "<keyType>passPhrase</keyType>\r\n                " +
-                        "<protected>false</protected>\r\n                " +
-                        $"<keyMaterial>{password}</keyMaterial>\r\n            " +
-                        "</sharedKey>\r\n        " +
-                        "</security>\r\n    " +
-                        "</MSM>\r\n    " +
-                        "<MacRandomization \r\nxmlns=\"http://www.microsoft.com/networking/WLAN/profile/v3\">\r\n        " +
-                        "<enableRandomization>false</enableRandomization>\r\n    " +
-                        "</MacRandomization>\r\n</WLANProfile>";
-                    Debug.WriteLine($"Connected to {ssid}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error connecting to Wi-Fi: {ex.Message}");
-                }
+            var selectedNetwork = NativeWifi.EnumerateAvailableNetworks()
+                .FirstOrDefault(n => n.Ssid.ToString() == ssid);
+
+            Debug.WriteLine($"Attempting to connect to {ssid}");
+            InputWindow inputWindow;
+
+            if (selectedNetwork.IsSecurityEnabled == false)
+            {
+                Debug.WriteLine("Popup user input window");
+                inputWindow = new InputWindow(this);
+                string password = inputWindow.GetPassword();
+                string passwordRequired = password.Length > 0 ? "true" : "false";
+                inputWindow.ShowDialog();
+            }
+            else
+            {
+                Debug.WriteLine($"connect to open network");
+            }
+
+            // Get the raw SSID from the button tag without the lock
+            string rawSsid = ssid.Replace("🔒 ", "");
+
+            var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
+            string assword;
+            string profileName = rawSsid;
+            Debug.WriteLine($"Profile name: {profileName}");
+            byte[] bytes = Encoding.UTF8.GetBytes(rawSsid);
+            Debug.WriteLine($"SSID bytes: {BitConverter.ToString(bytes)}");
+            string hexSSID = Convert.ToHexString(bytes);
+            Debug.WriteLine($"Hex SSID: {hexSSID}");
+            hexSSID = hexSSID.Replace("-", "");
+            Debug.WriteLine($"Hex SSID (cleaned): {hexSSID}");
+            string profileTemplate = "<?xml version=\"1.0\"?>\r\n" +
+                "<WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\">\r\n    " +
+                $"<name>{rawSsid}</name>\r\n    " +
+                "<SSIDConfig>\r\n        " +
+                "<SSID>\r\n            " +
+                $"<hex>{hexSSID}</hex>\r\n            " +
+                $"<name>{rawSsid}</name>\r\n        " +
+                "</SSID>\r\n    " +
+                "</SSIDConfig>\r\n    " +
+                "<connectionType>ESS</connectionType>\r\n    " +
+                "<connectionMode>auto</connectionMode>\r\n    " +
+                "<MSM>\r\n        " +
+                "<security>\r\n            " +
+                "<authEncryption>\r\n                " +
+                "<authentication>WPA2PSK</authentication>\r\n                " +
+                $"<encryption>AES</encryption>\r\n                " +
+                "<useOneX>false</useOneX>\r\n            " +
+                "</authEncryption>\r\n            " +
+                "<sharedKey>\r\n                " +
+                "<keyType>passPhrase</keyType>\r\n                " +
+                $"<protected>{passwordRequired}</protected>\r\n                " +
+                $"<keyMaterial>{password}</keyMaterial>\r\n            " +
+                "</sharedKey>\r\n        " +
+                "</security>\r\n    " +
+                "</MSM>\r\n    " +
+                "<MacRandomization \r\nxmlns=\"http://www.microsoft.com/networking/WLAN/profile/v3\">\r\n        " +
+                "<enableRandomization>false</enableRandomization>\r\n    " +
+                "</MacRandomization>\r\n</WLANProfile>";
+
+            Debug.WriteLine($"Profile XML: " +
+                $"{profileTemplate}");
+
+            Debug.WriteLine("Profile modified");
+
+
+            try
+            {
+                NativeWifi.SetProfile(
+                    interfaceId: wifiAdapter.Id,
+                    profileType: ProfileType.AllUser, 
+                    profileXml: profileTemplate, 
+                    profileSecurity: null, 
+                    overwrite: true);
+                NativeWifi.ConnectNetwork(
+                    interfaceId: wifiAdapter.Id,
+                    profileName: profileName,
+                    bssType: BssType.Infrastructure);
+
+                Debug.WriteLine($"Connected to {rawSsid}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error connecting to Wi-Fi: {ex.Message}");
             }
         }
+        
 
         // temp pin while testing shit
 

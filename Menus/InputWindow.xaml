@@ -20,13 +20,13 @@
         </Grid.ColumnDefinitions>
         <Border CornerRadius="10" Background="#AA222222" Padding="10">
             <StackPanel>
-                <TextBlock Text="Input Password for {SSID}:" Foreground="White" Margin="0,0,0,5"/>
-                <PasswordBox Name="pwdBox" 
+                <TextBlock x:Name="SSIDLabel"  Text="{Binding SSID}" Foreground="White" Margin="0,0,0,5"/>
+                    <PasswordBox Name="pwdBox" 
                              Width="200" 
                              Height="25" 
                              Background="White" 
                              Foreground="Black"/>
-                <Button Name="SubmitButton" 
+                    <Button Name="SubmitButton" 
                         Content="Submit" 
                         Width="75" 
                         Height="25" 

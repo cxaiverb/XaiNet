@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Drawing;
 
 
-namespace XaiNet2.Menus
+namespace XaiNet2.Helpers
 {
     public class WindowHelper
     {
@@ -28,7 +28,7 @@ namespace XaiNet2.Menus
                 //accent.GradientColor = Color.FromArgb(30, 255, 255, 0).ToArgb();
                 Debug.WriteLine($"GradientColor: {accent.GradientColor}");
                 int size = Marshal.SizeOf(accent);
-                IntPtr accentPtr = Marshal.AllocHGlobal(size);
+                nint accentPtr = Marshal.AllocHGlobal(size);
                 Marshal.StructureToPtr(accent, accentPtr, false);
 
                 var data = new WindowCompositionAttributeData
@@ -77,7 +77,7 @@ namespace XaiNet2.Menus
         private struct WindowCompositionAttributeData
         {
             public WindowCompositionAttribute Attribute;
-            public IntPtr Data;
+            public nint Data;
             public int SizeOfData;
         }
 
@@ -87,6 +87,6 @@ namespace XaiNet2.Menus
         }
 
         [DllImport("user32.dll")]
-        private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
+        private static extern int SetWindowCompositionAttribute(nint hwnd, ref WindowCompositionAttributeData data);
     }
 }

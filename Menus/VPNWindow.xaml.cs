@@ -12,7 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using XaiNet2.Menus;
+using XaiNet2.Helpers;
 
 namespace XaiNet2 
 { 

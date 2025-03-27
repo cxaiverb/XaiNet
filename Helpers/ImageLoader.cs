@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
 
-namespace XaiNet2.Menus
+namespace XaiNet2.Helpers
 {
     public static class ImageLoader
     {

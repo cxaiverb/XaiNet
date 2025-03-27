@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace XaiNet2.Menus
+namespace XaiNet2.Helpers
 {
     public static class WindowExtensions
     {

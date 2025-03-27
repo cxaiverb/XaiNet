@@ -1,4 +1,5 @@
 ﻿using ManagedNativeWifi;
+using Microsoft.Windows.Themes;
 using NetworkTrayApp;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Reflection.Metadata;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,6 +19,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Windows.Networking.Connectivity;
+using XaiNet2.Helpers;
 using XaiNet2.Menus;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
@@ -137,25 +140,28 @@ namespace XaiNet2
             return NativeWifi.ScanNetworksAsync(timeout: TimeSpan.FromSeconds(10));
         }
 
-        private void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
+        public void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button button || button.Tag is not string ssid)
             {
                 return;
             }
             // Get the raw SSID from the button tag without the lock
-            string rawSsid = ssid.Replace("🔒 ", "");
+            string rawSSID = ssid.Replace("🔒 ", "");
 
             var selectedNetwork = NativeWifi.EnumerateAvailableNetworks()
-                .FirstOrDefault(n => n.Ssid.ToString() == rawSsid);
+                .FirstOrDefault(n => n.Ssid.ToString() == rawSSID);
 
-            Debug.WriteLine($"Attempting to connect to {rawSsid}");
+            Debug.WriteLine($"Attempting to connect to {rawSSID}");
             InputWindow inputWindow;
             string password = "";
             if (selectedNetwork.IsSecurityEnabled != false)
             {
                 Debug.WriteLine("Popup user input window");
-                inputWindow = new InputWindow(this);
+                inputWindow = new InputWindow(this)
+                {
+                    SSID = rawSSID
+                };
                 inputWindow.ShowDialog();
 
                 password = inputWindow.GetPassword();
@@ -173,19 +179,19 @@ namespace XaiNet2
             string encryption = selectedNetwork.CipherAlgorithm.ToString();
             if (encryption == "None") encryption = "none";
             if (encryption == "CCMP") encryption = "AES";
-            string profileName = rawSsid;
+            string profileName = rawSSID;
             Debug.WriteLine($"Profile name: {profileName}");
-            byte[] bytes = Encoding.UTF8.GetBytes(rawSsid);
+            byte[] bytes = Encoding.UTF8.GetBytes(rawSSID);
             Debug.WriteLine($"SSID bytes: {BitConverter.ToString(bytes)}");
             string hexSSID = Convert.ToHexString(bytes);
             Debug.WriteLine($"Hex SSID: {hexSSID}");
             string profileTemplate = "<?xml version=\"1.0\"?>\r\n" +
                 "<WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\">\r\n    " +
-                $"<name>{rawSsid}</name>\r\n    " +
+                $"<name>{rawSSID}</name>\r\n    " +
                 "<SSIDConfig>\r\n        " +
                 "<SSID>\r\n            " +
                 $"<hex>{hexSSID}</hex>\r\n            " +
-                $"<name>{rawSsid}</name>\r\n        " +
+                $"<name>{rawSSID}</name>\r\n        " +
                 "</SSID>\r\n    " +
                 "</SSIDConfig>\r\n    " +
                 "<connectionType>ESS</connectionType>\r\n    " +
@@ -227,11 +233,13 @@ namespace XaiNet2
                     profileName: profileName,
                     bssType: BssType.Infrastructure);
 
-                Debug.WriteLine($"Connected to {rawSsid}");
+                NotificationHelper.ShowToast($"{rawSSID}", $"Connected to {rawSSID}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error connecting to Wi-Fi: {ex.Message}");
+                string pattern = @"ErrorMessage:\s([a-zA-Z\s:]+)[a-zA-Z\s.,;:\d]+ReasonMessage:\s([a-zA-Z\s:.]+)";
+                var match = Regex.Match(ex.Message, pattern);
+                NotificationHelper.ShowToast("Error", $"{match.Groups[1].Value}\n{match.Groups[2].Value}");
             }
         }
         

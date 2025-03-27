@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Microsoft.Win32;
 using System.Windows.Media.Animation;
-using XaiNet2.Menus;
+using XaiNet2.Helpers;
 
 namespace XaiNet2
 {

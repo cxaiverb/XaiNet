@@ -18,7 +18,7 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView;
 using SkiaSharp;
 using ManagedNativeWifi;
-using XaiNet2.Menus;
+using XaiNet2.Helpers;
 
 namespace NetworkTrayApp
 {

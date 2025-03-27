@@ -13,6 +13,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using XaiNet2.Helpers;
 
 namespace XaiNet2.Menus
 {
@@ -28,7 +29,10 @@ namespace XaiNet2.Menus
             bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
             this.SetMyrkurMode(myrkurModeEnabled);
 
+
+
         }
+        public string SSID { get; set; }
 
         private void PositionNearMainWindow(WirelessWindow owner)
         {
@@ -63,6 +67,7 @@ namespace XaiNet2.Menus
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             WindowHelper.ApplyBlurEffect(this);
+            SSIDLabel.Text = $"Input Password for: {SSID}";
         }
     }
 }

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:XaiNet2.Properties"
         xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+        xmlns:vm="clr-namespace:XaiNet2.Helpers"
         Title="Networks"
         ShowInTaskbar="False"
         Width="350" Height="450"
@@ -14,13 +15,14 @@
         Loaded="Window_Loaded"
         Deactivated="Window_Deactivated">
 
-<Window.Resources>
-    <ResourceDictionary>
-        <ResourceDictionary.MergedDictionaries>
-            <ResourceDictionary Source="/Helpers/Themes.xaml"/>
-        </ResourceDictionary.MergedDictionaries>
-    </ResourceDictionary>
-</Window.Resources>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Helpers/Themes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <vm:BitsToHumanConverter x:Key="BitsToHumanConverter"/>
+        </ResourceDictionary>
+    </Window.Resources>
 
     <Grid>
         <Border x:Name="BlurredBackground" Background="#55000000" CornerRadius="10"/>
@@ -91,6 +93,17 @@
                                             <TabControl Background="Transparent" HorizontalAlignment="Center">
                                                 <TabItem Header="Speed" Width="140">
                                                     <StackPanel>
+                                                        <Grid HorizontalAlignment="Center">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
+                                                            <TextBlock Text="{Binding SentSpeed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}Up: {0}/s}" Foreground="#00FF00" FontSize="14" Margin="5" Grid.Column="0" Grid.Row="0"/>
+                                                            <TextBlock Text="{Binding ReceiveSpeed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}Down: {0}/s}" Foreground="#00C8FF" FontSize="14" Margin="5" Grid.Column="1" Grid.Row="0"/>
+                                                        </Grid>
                                                         <lvc:CartesianChart Series="{Binding Series}" Height="150" Margin="0,0,0,0"
                                                                     YAxes="{Binding YAxes}"
                                                                     XAxes="{Binding XAxes}"
@@ -107,9 +120,9 @@
                                                         <TextBlock Text="{Binding Type}" Foreground="LightGray"/>
                                                         <TextBlock Text="{Binding Status}" Foreground="LightGray"/>
                                                         <TextBlock Text="{Binding IPAddress}" Foreground="LightGray"/>
-                                                        <TextBlock Text="{Binding Speed}" Foreground="LightGray"/>
-                                                        <TextBlock Text="{Binding SentSpeed}" Foreground="LightGray"/>
-                                                        <TextBlock Text="{Binding ReceiveSpeed}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding Speed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}{0}ps}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding SentSpeed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}{0}/s}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding ReceiveSpeed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}{0}/s}" Foreground="LightGray"/>
                                                     </StackPanel>
                                                 </TabItem>
                                             </TabControl>

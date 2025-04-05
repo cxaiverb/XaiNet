@@ -219,10 +219,10 @@ namespace NetworkTrayApp
                     Type = $"Type: {nic.NetworkInterfaceType}",
                     Status = $"Status: {nic.OperationalStatus}",
                     IPAddress = ipAddresses.Any() ? $"IP: {string.Join(", ", ipAddresses)}" : "IP: None",
-                    Speed = $"Speed: {BitsToHumanReadable(nic.Speed)}",
-                    SentSpeed = "S: 0 bps",
-                    ReceiveSpeed = "R: 0 bps",
-                    AdapterId = nic.Id
+                    Speed = nic.Speed,
+                    SentSpeed = 0,
+                    ReceiveSpeed = 0,
+                    AdapterId = nic.Id,
                 });
             }
 
@@ -292,13 +292,15 @@ namespace NetworkTrayApp
                             sentSpeed = speeds.SentSpeed;
                             recvSpeed = speeds.ReceiveSpeed;
                         }
-                        adapter.SentSpeed = $"S: {BitsToHumanReadable(sentSpeed)}/s";
-                        adapter.ReceiveSpeed = $"R: {BitsToHumanReadable(recvSpeed)}/s";
+                        adapter.SentSpeed = sentSpeed;
+                        adapter.ReceiveSpeed = recvSpeed;
                         //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
                         // Update Graph
                         if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
                         if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
                         
+
+
                         adapter.UploadSpeedValues.Add(sentSpeed);
                         adapter.DownloadSpeedValues.Add(recvSpeed);
                     }
@@ -306,6 +308,7 @@ namespace NetworkTrayApp
                 }
             }
         }
+
         private static int GetWiFiSignalStrength()
         {
             try
@@ -385,11 +388,11 @@ namespace NetworkTrayApp
             public string Type { get; set; }
             public string Status { get; set; }
             public string IPAddress { get; set; }
-            public string Speed { get; set; }
+            public long Speed { get; set; }
             public string AdapterId { get; set; }
 
-            private string sentSpeed;
-            public string SentSpeed
+            private long sentSpeed;
+            public long SentSpeed
             {
                 get => sentSpeed;
                 set
@@ -402,8 +405,8 @@ namespace NetworkTrayApp
                 }
             }
 
-            private string receiveSpeed;
-            public string ReceiveSpeed
+            private long receiveSpeed;
+            public long ReceiveSpeed
             {
                 get => receiveSpeed;
                 set
@@ -433,7 +436,7 @@ namespace NetworkTrayApp
                         Fill = new SolidColorPaint(new SKColor(0, 200, 255, 100)),
                         GeometrySize = 0,
                         Stroke = new SolidColorPaint(new SKColor(0, 200, 255)), // Light blue for download
-                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
+                        YToolTipLabelFormatter = point => new BitsToHumanConverter().Convert(point.Model, null, null, null).ToString()
 
                     },
                     new LineSeries<long>
@@ -442,7 +445,7 @@ namespace NetworkTrayApp
                         Fill = new SolidColorPaint(new SKColor(0, 255, 0, 100)),
                         GeometrySize = 0,
                         Stroke = new SolidColorPaint(new SKColor(0, 255, 0)), // Green for upload
-                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
+                        YToolTipLabelFormatter = point => new BitsToHumanConverter().Convert(point.Model, null, null, null).ToString()
                     }
                 };
             }
@@ -559,7 +562,7 @@ namespace NetworkTrayApp
                         info += $"DNS Servers: {string.Join(", ", dnsServers)}\n";
 
                     // Get Speeeeed
-                    info += $"Speed: {BitsToHumanReadable(nic.Speed)}\n";
+                    info += $"Speed: {new BitsToHumanConverter().Convert(nic.Speed, null, null, null).ToString()}\n";
 
                     info += "\n--------------------------------\n";
                 }
@@ -575,26 +578,6 @@ namespace NetworkTrayApp
         }
 
 
-
-
-
-
-
-
-        static string BitsToHumanReadable(long bits)
-        {
-            string[] units = { "b", "Kb", "Mb", "Gb", "Tb", "Pb", "Eb" };
-            double size = bits;
-            int unitIndex = 0;
-
-            while (size >= 1000 && unitIndex < units.Length - 1)
-            {
-                size /= 1000;
-                unitIndex++;
-            }
-
-            return $"{size:0.##} {units[unitIndex]}";
-        }
 
         private void TrayIcon_MouseClick(object sender, MouseEventArgs e)
         {

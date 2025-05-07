@@ -30,19 +30,20 @@ namespace XaiNet2
         public WirelessWindow(MainWindow owner)
         {
             InitializeComponent();
-            this.Owner = owner;
+            Owner = owner;
             PositionNearMainWindow(owner);
             if (!HasWiFiAdapter())
             {
                 NoWiFiTextBlock.Visibility = Visibility.Visible;
                 Debug.WriteLine("Wireless adapter not found :(");
+                Loaded += OnLoaded;
                 return;
             }
 
             NoWiFiTextBlock.Visibility = Visibility.Collapsed;
 
             LoadWiFiNetworks();
-            this.Loaded += OnLoaded;
+            Loaded += OnLoaded;
             bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
             this.SetMyrkurMode(myrkurModeEnabled);
         }
@@ -242,7 +243,13 @@ namespace XaiNet2
                 NotificationHelper.ShowToast("Error", $"{match.Groups[1].Value}\n{match.Groups[2].Value}");
             }
         }
-        
+        private void ProfileButton_Click(object sender, RoutedEventArgs e)
+        {
+            var profilesWindow = new ProfilesWindow(this);
+            profilesWindow.Show();
+            Hide();
+        }
+
         private void Window_Deactivated(object sender, EventArgs e)
         {
             Hide();

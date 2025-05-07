@@ -538,6 +538,7 @@ namespace NetworkTrayApp
                     info += $"Status: {nic.OperationalStatus}\n";
                     info += $"Type: {nic.NetworkInterfaceType}\n";
                     info += $"Description: {nic.Description}\n";
+                    info += $"MAC Address: {nic.GetPhysicalAddress()}\n";
 
                     // Get IP addresses
                     var ipProps = nic.GetIPProperties();

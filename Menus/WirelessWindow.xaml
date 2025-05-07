@@ -40,20 +40,28 @@
                         
                         <Button Name="HomeButton" Click="HomeButton_Click"
                                 Width="32" Height="32"
+                                ToolTip="Home"
                                 Background="Transparent" Foreground="White"
                                 BorderThickness="0" Cursor="Hand"
                                 Grid.Column="0"
                                 Grid.Row="0"/>
                         <Button Name="RefreshButton" Click="RefreshWiFi_Click"
                                 Width="32" Height="32"
+                                ToolTip="Refresh"
                                 Background="Transparent" Foreground="White"
                                 BorderThickness="0" Cursor="Hand"
                                 Grid.Column="1"
                                 Grid.Row="0"/>
-
+                        <Button Name="ProfileButton" Click="ProfileButton_Click"
+                                Width="32" Height="32"
+                                ToolTip="Saved Profiles"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Grid.Column="2"
+                                Grid.Row="0"/>
                         <TextBlock Text="Wi-Fi Networks" Foreground="White" 
                                    FontSize="16"
-                                   Grid.Column="2"
+                                   Grid.Column="3"
                                    Grid.Row="0"
                                    VerticalAlignment="Center"/>
                     </Grid>

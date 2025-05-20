@@ -213,9 +213,19 @@ namespace NetworkTrayApp
                     .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     .Select(a => a.Address.ToString());
 
+                string networkName = nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 && nic.OperationalStatus == OperationalStatus.Up
+                    ? GetConnectedWiFiSSID() 
+                    : $"{Name}";
+
+                if (string.IsNullOrEmpty(networkName))
+                {
+                    networkName = nic.Name; // Fallback to NIC name if no SSID
+                }
+
                 allAdapters.Add(new NetworkAdapterInfo
                 {
                     Name = nic.Name,
+                    NetName = networkName,
                     Type = $"Type: {nic.NetworkInterfaceType}",
                     Status = $"Status: {nic.OperationalStatus}",
                     IPAddress = ipAddresses.Any() ? $"IP: {string.Join(", ", ipAddresses)}" : "IP: None",
@@ -385,6 +395,7 @@ namespace NetworkTrayApp
         public class NetworkAdapterInfo : INotifyPropertyChanged
         {
             public string Name { get; set; }
+            public string NetName { get; set; }
             public string Type { get; set; }
             public string Status { get; set; }
             public string IPAddress { get; set; }

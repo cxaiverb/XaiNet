@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,19 +28,19 @@ namespace XaiNet2.Menus
         }
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            string backIcon = "back";
-            var backIco = ImageLoader.LoadImageFromResources(backIcon);
+            string homeIcon = "back";
+            var homeIco = ImageLoader.LoadImageFromResources(homeIcon);
 
-            if (backIco != null)
+            if (homeIco != null)
             {
-                BackButton.Content = new Image
+                HomeButton.Content = new Image
                 {
-                    Source = backIco,
+                    Source = homeIco,
                     Width = 16,
                     Height = 16
                 };
             }
-
+            Debug.WriteLine($"Home icon loaded: {homeIco != null}");
         }
         private void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
@@ -61,9 +62,10 @@ namespace XaiNet2.Menus
                 Height = Owner.Height;
             }
         }
-        private void BackButton_Click(object sender, RoutedEventArgs e)
+        private void HomeButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
+            Owner.Show();
         }
         private void Window_Deactivated(object sender, EventArgs e)
         {

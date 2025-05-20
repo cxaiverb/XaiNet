@@ -26,13 +26,13 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Button Name="BackButton" Click="BackButton_Click"
-                    Width="32" Height="32"
-                    ToolTip="Back"
-                    Background="Transparent" Foreground="White"
-                    BorderThickness="0" Cursor="Hand"
-                    HorizontalAlignment="Left" VerticalAlignment="Top"
-                    Margin="5" Grid.Column="0" Grid.Row="0"/>
+            <Button Name="HomeButton" Click="HomeButton_Click"
+                                Width="32" Height="32"
+                                ToolTip="Home"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Grid.Column="0"
+                                Grid.Row="0"/>
 
             <TextBlock Text="Saved Profiles"
                        Foreground="White" FontSize="16" Margin="0,0,0,10"

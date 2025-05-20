@@ -80,16 +80,17 @@ namespace NetworkTrayApp
 
                 foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    if (nic.OperationalStatus == OperationalStatus.Up)
+                    if (nic.OperationalStatus != OperationalStatus.Up)
                     {
-                        if (nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)
-                        {
-                            activeWiFi = nic;
-                        }
-                        else if (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
-                        {
-                            activeEthernet = nic;
-                        }
+                        continue;
+                    }
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)
+                    {
+                        activeWiFi = nic;
+                    }
+                    else if (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+                    {
+                        activeEthernet = nic;
                     }
                 }
 
@@ -97,7 +98,8 @@ namespace NetworkTrayApp
                 if (activeWiFi != null)
                 {
                     // Get Signal Strength
-                    ConnectionStrength = GetWiFiSignalStrength();
+                    ConnectionStrength = GetWiFiSignalStrength(Guid.Parse(activeWiFi.Id));
+                    Debug.WriteLine($"Active Wi-Fi ID: {activeWiFi.Id} for {activeWiFi.Name}");
                     Debug.WriteLine($"Wi-Fi Signal Strength: {ConnectionStrength}dBm");
 
                     if (ConnectionStrength <= -100)
@@ -214,7 +216,7 @@ namespace NetworkTrayApp
                     .Select(a => a.Address.ToString());
 
                 string networkName = nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 && nic.OperationalStatus == OperationalStatus.Up
-                    ? GetConnectedWiFiSSID() 
+                    ? GetConnectedWiFiSSID(Guid.Parse(nic.Id)) 
                     : $"{Name}";
 
                 if (string.IsNullOrEmpty(networkName))
@@ -232,7 +234,7 @@ namespace NetworkTrayApp
                     Speed = nic.Speed,
                     SentSpeed = 0,
                     ReceiveSpeed = 0,
-                    AdapterId = nic.Id,
+                    AdapterId = Guid.Parse(nic.Id),
                 });
             }
 
@@ -319,20 +321,20 @@ namespace NetworkTrayApp
             }
         }
 
-        private static int GetWiFiSignalStrength()
+        private static int GetWiFiSignalStrength(Guid adapterid)
         {
             try
             {
-                string connectedSSID = GetConnectedWiFiSSID();
+                string connectedSSID = GetConnectedWiFiSSID(adapterid);
                 if (string.IsNullOrEmpty(connectedSSID)) return 0; // No connection
 
                 var wifiNetworks = NativeWifi.EnumerateBssNetworks()
-                    .Where(network => network.Ssid.ToString() == connectedSSID)
-                    .ToList();
+                    .Where(network => network.Interface.Id == adapterid)
+                    .FirstOrDefault();
 
-                if (wifiNetworks.Any())
+                if (wifiNetworks != null)
                 {
-                    return wifiNetworks.First().SignalStrength; // Return signal strength percentage
+                    return wifiNetworks.SignalStrength; // Return signal strength percentage
                 }
             }
             catch (Exception ex)
@@ -344,12 +346,11 @@ namespace NetworkTrayApp
         }
 
 
-        private static string GetConnectedWiFiSSID()
+        private static string GetConnectedWiFiSSID(Guid adapterid)
         {
             try
             {
-                var activeConnection = NativeWifi.EnumerateInterfaceConnections()
-                    .FirstOrDefault(); // Get the first active connection
+                var activeConnection = NativeWifi.EnumerateInterfaceConnections().FirstOrDefault(x => x.Id == adapterid);
 
                 if (activeConnection != null)
                 {
@@ -400,7 +401,7 @@ namespace NetworkTrayApp
             public string Status { get; set; }
             public string IPAddress { get; set; }
             public long Speed { get; set; }
-            public string AdapterId { get; set; }
+            public Guid AdapterId { get; set; }
 
             private long sentSpeed;
             public long SentSpeed

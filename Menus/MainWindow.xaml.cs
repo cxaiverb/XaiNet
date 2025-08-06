@@ -101,6 +101,8 @@ namespace NetworkTrayApp
                     ConnectionStrength = GetWiFiSignalStrength(Guid.Parse(activeWiFi.Id));
                     Debug.WriteLine($"Active Wi-Fi ID: {activeWiFi.Id} for {activeWiFi.Name}");
                     Debug.WriteLine($"Wi-Fi Signal Strength: {ConnectionStrength}dBm");
+                    string ssid = GetConnectedWiFiSSID(Guid.Parse(activeWiFi.Id));
+                    OpenVPNManager.HandleNetworkChange(ssid);
 
                     if (ConnectionStrength <= -100)
                     {

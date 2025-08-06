@@ -28,6 +28,22 @@
             <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="OpenVPN Configs" Foreground="White" FontSize="16" Margin="0,0,0,10"/>
+                    <Button Content="Add Profile" Width="100" Margin="0,0,0,10" Click="AddProfileButton_Click"/>
+                    <ItemsControl x:Name="VpnProfilesList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="5" Padding="5" Background="#AA333333" CornerRadius="5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}" Foreground="White"/>
+                                        <Button Content="Connect" Margin="5,0,0,0" Click="ConnectButton_Click"/>
+                                        <Button Content="Disconnect" Margin="5,0,0,0" Click="DisconnectButton_Click"/>
+                                        <Button Content="Auto" Margin="5,0,0,0" Click="AutoButton_Click"/>
+                                        <Button Content="Delete" Margin="5,0,0,0" Click="DeleteButton_Click"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

@@ -74,6 +74,18 @@ namespace XaiNet2
                     Height = 16
                 };
             }
+            string profilesIcon = "options";
+            var profileIco = ImageLoader.LoadImageFromResources(profilesIcon);
+
+            if (profileIco != null)
+            {
+                ProfileButton.Content = new Image
+                {
+                    Source = profileIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
         }
 
         private bool HasWiFiAdapter()

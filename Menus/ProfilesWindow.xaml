@@ -17,16 +17,24 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
+    
     <Border CornerRadius="10" Background="#AA222222" Padding="10">
         <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Button Name="HomeButton" Click="HomeButton_Click"
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Grid VerticalAlignment="Top" HorizontalAlignment="Left" ShowGridLines="True">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Button Name="HomeButton" Click="HomeButton_Click"
                                 Width="32" Height="32"
                                 ToolTip="Home"
                                 Background="Transparent" Foreground="White"
@@ -34,11 +42,13 @@
                                 Grid.Column="0"
                                 Grid.Row="0"/>
 
-            <TextBlock Text="Saved Profiles"
-                       Foreground="White" FontSize="16" Margin="0,0,0,10"
-                       Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"/>
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
+                        <TextBlock Text="Saved Profiles" Foreground="White" 
+                                   FontSize="16"
+                                   Grid.Column="1" 
+                                   Grid.Row="0" 
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
                     <ItemsControl x:Name="ProfilesList" Margin="0,10,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -46,6 +56,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Name}" Foreground="White"/>
                                         <Button Content="Connect" Click="ConnectButton_Click" Margin="5,0,0,0"/>
+                                        <Button Content="Delete" Click="DeleteButton_Click" Margin="5,0,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

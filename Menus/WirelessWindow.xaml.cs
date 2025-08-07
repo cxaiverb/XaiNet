@@ -86,6 +86,18 @@ namespace XaiNet2
                     Height = 16
                 };
             }
+            string defaultIcon = "pin-outline";
+            var defaultImage = ImageLoader.LoadImageFromResources(defaultIcon);
+
+            if (defaultImage != null)
+            {
+                PinButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = defaultImage,
+                    Width = 16,
+                    Height = 16
+                };
+            }
         }
 
         private bool HasWiFiAdapter()
@@ -255,6 +267,26 @@ namespace XaiNet2
                 NotificationHelper.ShowToast("Error", $"{match.Groups[1].Value}\n{match.Groups[2].Value}");
             }
         }
+        private bool isPinned = false;
+        private void PinButton_Click(object sender, RoutedEventArgs e)
+        {
+            isPinned = !isPinned; // Toggle state
+            Topmost = isPinned;   // Keep window on top when pinned
+
+            string iconName = isPinned ? "pin-solid" : "pin-outline";
+
+            var newIcon = ImageLoader.LoadImageFromResources(iconName);
+
+            if (newIcon != null)
+            {
+                PinButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = newIcon,
+                    Width = 16,
+                    Height = 16
+                };
+            }
+        }
         private void ProfileButton_Click(object sender, RoutedEventArgs e)
         {
             var profilesWindow = new ProfilesWindow(this);
@@ -264,7 +296,10 @@ namespace XaiNet2
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            Hide();
+            if( !isPinned)
+            {
+                Hide();
+            }
         }
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {

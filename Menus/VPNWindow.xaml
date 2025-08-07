@@ -37,6 +37,7 @@
                                         <TextBlock Text="{Binding Name}" Foreground="White"/>
                                         <Button Content="Connect" Margin="5,0,0,0" Click="ConnectButton_Click"/>
                                         <Button Content="Disconnect" Margin="5,0,0,0" Click="DisconnectButton_Click"/>
+                                        <Button Content="Log" Margin="5,0,0,0" Click="LogButton_Click"/>
                                         <Button Content="Auto" Margin="5,0,0,0" Click="AutoButton_Click"/>
                                         <Button Content="Delete" Margin="5,0,0,0" Click="DeleteButton_Click"/>
                                     </StackPanel>

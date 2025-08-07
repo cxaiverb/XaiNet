@@ -77,7 +77,13 @@ namespace XaiNet2
                 LoadProfiles();
             }
         }
-
+        private void LogButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is OpenVpnProfile profile)
+            {
+                OpenVPNManager.OpenLog(profile.Name);
+            }
+        }
         private void AutoButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.DataContext is OpenVpnProfile profile)

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using XaiNet2.Properties;
 
 namespace XaiNet2.Helpers
 {
@@ -17,18 +18,31 @@ namespace XaiNet2.Helpers
     public static class OpenVPNManager
     {
         private static readonly string ProfileStorePath = Path.Combine(AppContext.BaseDirectory, "openvpn_profiles.json");
-        private static readonly string OpenVpnConfigDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "OpenVPN Connect", "profiles");
-        private static readonly List<OpenVpnProfile> profiles = LoadProfilesInternal();
-        private static readonly Dictionary<string, Process> activeConnections = new();
-        private static readonly string? openVpnExecutable = LocateOpenVpn();
+        private static string configDirectory;
+        private static string logDirectory;
+        private static readonly List<OpenVpnProfile> profiles;
+        private static readonly HashSet<string> activeConnections = new();
+        private static readonly string? openVpnGuiExecutable = LocateOpenVpnGui();
+        static OpenVPNManager()
+        {
+            configDirectory = string.IsNullOrWhiteSpace(Settings.Default.OpenVpnConfigDir)
+                ? GetDefaultConfigDir()
+                : Settings.Default.OpenVpnConfigDir;
+            logDirectory = string.IsNullOrWhiteSpace(Settings.Default.OpenVpnLogDir)
+                ? GetDefaultLogDir()
+                : Settings.Default.OpenVpnLogDir;
 
-        private static string? LocateOpenVpn()
+            Directory.CreateDirectory(configDirectory);
+            Directory.CreateDirectory(logDirectory);
+
+            profiles = LoadProfilesInternal();
+        }
+
+        private static string? LocateOpenVpnGui()
         {
             string[] exeNames = Environment.OSVersion.Platform == PlatformID.Win32NT
-                ? new[] { "openvpn.exe", "openvpnconnect.exe", "OpenVPNConnect.exe" }
-                : new[] { "openvpn" };
+                ? new[] { "openvpn-gui.exe" }
+                : new[] { "openvpn-gui" };
 
             var pathEnv = Environment.GetEnvironmentVariable("PATH");
             if (!string.IsNullOrEmpty(pathEnv))
@@ -59,12 +73,10 @@ namespace XaiNet2.Helpers
                 var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
                 string[] additionalPaths =
                 {
-                    Path.Combine(programFiles, "OpenVPN", "bin", "openvpn.exe"),
-                    Path.Combine(programFiles, "OpenVPN", "OpenVPN", "bin", "openvpn.exe"),
-                    Path.Combine(programFilesX86, "OpenVPN", "bin", "openvpn.exe"),
-                    Path.Combine(programFilesX86, "OpenVPN", "OpenVPN", "bin", "openvpn.exe"),
-                    Path.Combine(programFiles, "OpenVPN Connect", "OpenVPNConnect.exe"),
-                    Path.Combine(programFilesX86, "OpenVPN Connect", "OpenVPNConnect.exe"),
+                    Path.Combine(programFiles, "OpenVPN", "bin", "openvpn-gui.exe"),
+                    Path.Combine(programFiles, "OpenVPN", "OpenVPN", "bin", "openvpn-gui.exe"),
+                    Path.Combine(programFilesX86, "OpenVPN", "bin", "openvpn-gui.exe"),
+                    Path.Combine(programFilesX86, "OpenVPN", "OpenVPN", "bin", "openvpn-gui.exe"),
                 };
                 foreach (var p in additionalPaths)
                 {
@@ -100,9 +112,9 @@ namespace XaiNet2.Helpers
 
             try
             {
-                if (Directory.Exists(OpenVpnConfigDir))
+                if (Directory.Exists(configDirectory))
                 {
-                    foreach (var file in Directory.GetFiles(OpenVpnConfigDir, "*.ovpn"))
+                    foreach (var file in Directory.GetFiles(configDirectory, "*.ovpn", SearchOption.AllDirectories))
                     {
                         if (!loadedProfiles.Any(p => string.Equals(p.ConfigPath, file, StringComparison.OrdinalIgnoreCase)))
                         {
@@ -145,16 +157,16 @@ namespace XaiNet2.Helpers
         {
             try
             {
-                Directory.CreateDirectory(OpenVpnConfigDir);
+                Directory.CreateDirectory(configDirectory);
                 string fileName = Path.GetFileName(configPath);
                 string baseName = Path.GetFileNameWithoutExtension(fileName);
-                string destPath = Path.Combine(OpenVpnConfigDir, fileName);
-                int suffix = 1;
-                while (File.Exists(destPath))
-                {
-                    destPath = Path.Combine(OpenVpnConfigDir, $"{baseName}_{suffix++}.ovpn");
-                }
-                File.Copy(configPath, destPath, overwrite: false);
+                string destPath = Path.Combine(configDirectory, baseName);
+                Directory.CreateDirectory(destPath);
+                string fileDest = Path.Combine(destPath, fileName);
+
+
+
+                File.Copy(configPath, fileDest, overwrite: false);
 
                 string profileName = Path.GetFileNameWithoutExtension(destPath);
                 string uniqueName = profileName;
@@ -185,6 +197,11 @@ namespace XaiNet2.Helpers
                     if (File.Exists(profile.ConfigPath))
                     {
                         File.Delete(profile.ConfigPath);
+                        var dir = Path.GetDirectoryName(profile.ConfigPath);
+                        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                        {
+                            Directory.Delete(dir);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -208,30 +225,30 @@ namespace XaiNet2.Helpers
         public static bool Connect(string name)
         {
             var profile = profiles.FirstOrDefault(p => p.Name == name);
-            if (profile == null || activeConnections.ContainsKey(name) || !File.Exists(profile.ConfigPath))
+            if (profile == null || activeConnections.Contains(name) || !File.Exists(profile.ConfigPath))
             {
                 return false;
             }
-            if (string.IsNullOrEmpty(openVpnExecutable))
+            if (string.IsNullOrEmpty(openVpnGuiExecutable))
             {
-                Debug.WriteLine("OpenVPN executable not found.");
+                Debug.WriteLine("OpenVPN GUI executable not found.");
                 return false;
             }
             try
             {
+                var relative = Path.GetRelativePath(configDirectory, profile.ConfigPath);
+                var configName = Path.ChangeExtension(relative, null);
+                var logPath = GetLogPath(profile.Name);
                 var psi = new ProcessStartInfo
                 {
-                    FileName = openVpnExecutable,
-                    Arguments = $"--config \"{profile.ConfigPath}\"",
+                    FileName = openVpnGuiExecutable,
+                    Arguments = $"--command connect \"{profile.Name}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 };
-                var process = Process.Start(psi);
-                if (process != null)
-                {
-                    activeConnections[name] = process;
-                    return true;
-                }
+                Process.Start(psi);
+                activeConnections.Add(name);
+                return true;
             }
             catch (Exception ex)
             {
@@ -242,26 +259,64 @@ namespace XaiNet2.Helpers
 
         public static void Disconnect(string name)
         {
-            if (activeConnections.TryGetValue(name, out var process))
+            if (!activeConnections.Contains(name) || string.IsNullOrEmpty(openVpnGuiExecutable))
             {
-                try
+                return;
+            }
+            try
+            {
+                var profile = profiles.FirstOrDefault(p => p.Name == name);
+                if (profile == null)
                 {
-                    if (!process.HasExited)
-                    {
-                        process.Kill();
-                    }
+                    return;
                 }
-                catch (Exception ex)
+                var relative = Path.GetRelativePath(configDirectory, profile.ConfigPath);
+                var configName = Path.ChangeExtension(relative, null);
+                var psi = new ProcessStartInfo
                 {
-                    Debug.WriteLine($"Error disconnecting VPN '{name}': {ex.Message}");
-                }
-                finally
-                {
-                    activeConnections.Remove(name);
-                }
+                    FileName = openVpnGuiExecutable,
+                    Arguments = $"--command disconnect \"{configName}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error disconnecting VPN '{name}': {ex.Message}");
+            }
+            finally
+            {
+                activeConnections.Remove(name);
             }
         }
+        
+        public static string GetLogPath(string name)
+        {
+            Directory.CreateDirectory(LogDirectory);
+            return Path.Combine(LogDirectory, $"{name}.log");
+        }
 
+        public static void OpenLog(string name)
+        {
+            try
+            {
+                var logPath = GetLogPath(name);
+                if (File.Exists(logPath))
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = logPath,
+                        UseShellExecute = true
+                    };
+                    Process.Start(psi);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error opening log for VPN '{name}': {ex.Message}");
+            }
+        }
         public static void HandleNetworkChange(string? currentNetwork)
         {
             if (string.IsNullOrWhiteSpace(currentNetwork))
@@ -272,12 +327,68 @@ namespace XaiNet2.Helpers
             {
                 if (string.Equals(profile.AutoConnectNetwork, currentNetwork, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!activeConnections.ContainsKey(profile.Name))
+                    if (!activeConnections.Contains(profile.Name))
                     {
                         Connect(profile.Name);
                     }
                 }
             }
+        }
+        public static string ConfigDirectory => configDirectory;
+        public static string LogDirectory => logDirectory;
+
+        public static void SetDirectories(string? configDir, string? logDir)
+        {
+            bool reload = false;
+            if (!string.IsNullOrWhiteSpace(configDir) && configDir != configDirectory)
+            {
+                configDirectory = configDir;
+                Directory.CreateDirectory(configDirectory);
+                Settings.Default.OpenVpnConfigDir = configDirectory;
+                reload = true;
+            }
+            if (!string.IsNullOrWhiteSpace(logDir) && logDir != logDirectory)
+            {
+                logDirectory = logDir;
+                Directory.CreateDirectory(logDirectory);
+                Settings.Default.OpenVpnLogDir = logDirectory;
+            }
+            if (reload)
+            {
+                profiles.Clear();
+                profiles.AddRange(LoadProfilesInternal());
+            }
+            Settings.Default.Save();
+        }
+
+        private static string GetDefaultConfigDir()
+        {
+            var userDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OpenVPN", "config");
+            var programDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OpenVPN", "config");
+            if (Directory.Exists(userDir))
+            {
+                return userDir;
+            }
+            if (Directory.Exists(programDir))
+            {
+                return programDir;
+            }
+            return userDir;
+        }
+
+        private static string GetDefaultLogDir()
+        {
+            var userLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OpenVPN", "log");
+            var programLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OpenVPN", "log");
+            if (Directory.Exists(userLog))
+            {
+                return userLog;
+            }
+            if (Directory.Exists(programLog))
+            {
+                return programLog;
+            }
+            return Path.Combine(AppContext.BaseDirectory, "openvpn_logs");
         }
     }
 }

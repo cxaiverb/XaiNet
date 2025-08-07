@@ -16,6 +16,7 @@ using System.Windows.Shapes;
 using Microsoft.Win32;
 using System.Windows.Media.Animation;
 using XaiNet2.Helpers;
+using WinForms = System.Windows.Forms;
 
 namespace XaiNet2
 {
@@ -40,6 +41,9 @@ namespace XaiNet2
             MyrkurModeCheckBox.IsChecked = myrkurModeEnabled;
             // Apply Myrkur Mode to Options Window
             this.SetMyrkurMode(myrkurModeEnabled);
+
+            ConfigDirTextBox.Text = OpenVPNManager.ConfigDirectory;
+            LogDirTextBox.Text = OpenVPNManager.LogDirectory;
 
         }
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -142,11 +146,30 @@ namespace XaiNet2
             {
                 window.SetMyrkurMode(myrkurMode);
             }
+            
+            OpenVPNManager.SetDirectories(ConfigDirTextBox.Text, LogDirTextBox.Text);
 
             Properties.Settings.Default.Save();
 
             this.Hide();
             Owner.Show();
+        }
+        private void BrowseConfigDir_Click(object sender, RoutedEventArgs e)
+        {
+            using var dialog = new WinForms.FolderBrowserDialog();
+            if (dialog.ShowDialog() == WinForms.DialogResult.OK)
+            {
+                ConfigDirTextBox.Text = dialog.SelectedPath;
+            }
+        }
+
+        private void BrowseLogDir_Click(object sender, RoutedEventArgs e)
+        {
+            using var dialog = new WinForms.FolderBrowserDialog();
+            if (dialog.ShowDialog() == WinForms.DialogResult.OK)
+            {
+                LogDirTextBox.Text = dialog.SelectedPath;
+            }
         }
         private void CancelOptions_Click(object sender, RoutedEventArgs e)
         {

@@ -53,6 +53,26 @@
                         </StackPanel>
                     </Expander>
 
+
+                    <!-- OpenVPN Paths Expander -->
+                    <Expander Header="OpenVPN Paths" Foreground="White" FontSize="14">
+                        <Expander.Resources>
+                            <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
+                        </Expander.Resources>
+                        <StackPanel Margin="10">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBlock Text="Config Dir" Foreground="White" Width="80"/>
+                                <TextBox Name="ConfigDirTextBox" Width="150"/>
+                                <Button Content="Browse" Margin="5,0,0,0" Click="BrowseConfigDir_Click"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Log Dir" Foreground="White" Width="80"/>
+                                <TextBox Name="LogDirTextBox" Width="150"/>
+                                <Button Content="Browse" Margin="5,0,0,0" Click="BrowseLogDir_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
                 </StackPanel>
             </ScrollViewer>
 

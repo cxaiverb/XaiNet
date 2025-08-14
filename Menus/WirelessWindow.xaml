@@ -78,7 +78,7 @@
                         <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
                     </ScrollViewer.Resources>
                     <StackPanel Name="AvailableNetworks">
-                        <StackPanel Name="AvailableNetworksPanel" Margin="10">
+                        <StackPanel Name="AvailableNetworksPanel">
                             <TextBlock Text="No Wi-Fi adapter detected." Foreground="LightGray" Name="NoWiFiTextBlock"/>
                         </StackPanel>
                         <ItemsControl Name="WiFiNetworkList">

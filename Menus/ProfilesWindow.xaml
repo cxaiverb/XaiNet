@@ -17,53 +17,72 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-    
-    <Border CornerRadius="10" Background="#AA222222" Padding="10">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <Grid VerticalAlignment="Top" HorizontalAlignment="Left" ShowGridLines="True">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Button Name="HomeButton" Click="HomeButton_Click"
-                                Width="32" Height="32"
-                                ToolTip="Home"
-                                Background="Transparent" Foreground="White"
-                                BorderThickness="0" Cursor="Hand"
-                                Grid.Column="0"
-                                Grid.Row="0"/>
 
-                        <TextBlock Text="Saved Profiles" Foreground="White" 
-                                   FontSize="16"
-                                   Grid.Column="1" 
-                                   Grid.Row="0" 
-                                   VerticalAlignment="Center"/>
-                    </Grid>
-
-                    <ItemsControl x:Name="ProfilesList" Margin="0,10,0,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="5" Padding="5" Background="#AA333333" CornerRadius="5">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Name}" Foreground="White"/>
-                                        <Button Content="Connect" Click="ConnectButton_Click" Margin="5,0,0,0"/>
-                                        <Button Content="Delete" Click="DeleteButton_Click" Margin="5,0,0,0"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
-    </Border>
+    <Grid>
+        <Border x:Name="BlurredBackground" Background="#55000000" CornerRadius="10"/>
+        <Border CornerRadius="10" Background="#AA222222" Padding="10">
+            <Grid>
+                <Grid VerticalAlignment="Top"
+                      HorizontalAlignment="Left"
+                      ShowGridLines="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Saved Profiles"
+                               Foreground="White"
+                               FontSize="16"
+                               Margin="0,0,200,0"
+                               Grid.Column="0"
+                               Grid.Row="0"/>
+                    <Button Name="HomeButton"
+                            Click="HomeButton_Click"
+                            Width="32" Height="32"
+                            ToolTip="Home"
+                            Background="Transparent" 
+                            Foreground="White"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Grid.Column="1"
+                            Grid.Row="0"/>
+                </Grid>
+                <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
+                    </ScrollViewer.Resources>
+                    <StackPanel Name="ProfilePanel">
+                        <StackPanel Name="ProfilesListPanel">
+                            <TextBlock Text="No saved profiles found."
+                                       Foreground="LightGray"
+                                       Name="NoProfilesText"/>
+                        </StackPanel>
+                        <ItemsControl x:Name="ProfilesList" Margin="0,10,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="5" Padding="5" Background="#AA333333" CornerRadius="5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Name}" 
+                                                       Foreground="White"/>
+                                            <Button Content="Connect"
+                                                    Click="ConnectButton_Click"
+                                                    Margin="5,0,0,0"
+                                                    Style="{StaticResource CustomButton}"/>
+                                            <Button Content="Delete"
+                                                    Click="DeleteButton_Click"
+                                                    Margin="5,0,0,0"
+                                                    Style="{StaticResource CustomButton}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

@@ -8,12 +8,13 @@
         ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
+        Loaded="Window_Loaded"
         Deactivated="Window_Deactivated">
 
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Themes.xaml"/>
+                <ResourceDictionary Source="/Helpers/Themes.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
@@ -51,6 +52,27 @@
                             <CheckBox Content="Enable Myrkur Mode" Name="MyrkurModeCheckBox" Foreground="White"/>
                         </StackPanel>
                     </Expander>
+
+
+                    <!-- OpenVPN Paths Expander -->
+                    <Expander x:Name="OpenVPNPathsExpander" Header="OpenVPN Paths" Foreground="White" FontSize="14">
+                        <Expander.Resources>
+                            <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
+                        </Expander.Resources>
+                        <StackPanel Margin="10">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBlock Text="Config Dir" Foreground="White" Width="80"/>
+                                <TextBox Name="ConfigDirTextBox" Width="150"/>
+                                <Button Content="Browse" Margin="5,0,0,0" Click="BrowseConfigDir_Click"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Log Dir" Foreground="White" Width="80"/>
+                                <TextBox Name="LogDirTextBox" Width="150"/>
+                                <Button Content="Browse" Margin="5,0,0,0" Click="BrowseLogDir_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
                 </StackPanel>
             </ScrollViewer>
 
@@ -58,8 +80,13 @@
             <Button Content="Save" Click="SaveOptions_Click"
                 Background="Gray" Foreground="White" 
                 Margin="5,10,5,10" Height="30" Width="100"
-                HorizontalAlignment="Center"
+                HorizontalAlignment="Left"
                 Grid.Row="1"/>
+            <Button Content="Cancel" Click="CancelOptions_Click"
+                    Background="Gray" Foreground="White"
+                    Margin="5,10,5,10" Height="30" Width="100"
+                    HorizontalAlignment="Right"
+                    Grid.Row="1"/>
             <!-- Pinned at the bottom -->
         </Grid>
     </Border>

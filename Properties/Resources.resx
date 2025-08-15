@@ -118,8 +118,11 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="home" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\home.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="no-network-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\no-network-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\resources\wired\no-network-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="openvpn" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\openvpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
@@ -133,16 +136,34 @@
   <data name="pin-solid" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\pin-solid.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="wi-fi-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\wi-fi-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\refresh.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="wi-fi-1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\wifi\wi-fi-1.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="wi-fi-2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\wifi\wi-fi-2.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="wi-fi-3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\wifi\wi-fi-3.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="wi-fi-4" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\wifi\wi-fi-4.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="wi-fi-full" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\wifi\wi-fi-full.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="wifi-menu" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\wifi-menu.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="wifi-vpn" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\wifi-vpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\resources\wifi\wifi-vpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="wired-network-connection-w" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\wired-network-connection-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\resources\wired\wired-network-connection-w.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="wired-vpn" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\wired-vpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\resources\wired\wired-vpn.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

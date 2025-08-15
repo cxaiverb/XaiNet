@@ -10,13 +10,15 @@ using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Threading;
+using System.Management;
 using XaiNet2;
 using LiveChartsCore;
 using System.Collections.ObjectModel;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView;
 using SkiaSharp;
-using System.Security.Cryptography.X509Certificates;
+using ManagedNativeWifi;
+using XaiNet2.Helpers;
 
 namespace NetworkTrayApp
 {
@@ -41,6 +43,8 @@ namespace NetworkTrayApp
 
             this.Loaded += OnLoaded;
 
+            bool myrkurModeEnabled = XaiNet2.Properties.Settings.Default.MyrkurMode;
+            this.SetMyrkurMode(myrkurModeEnabled);
 
         }
 
@@ -67,6 +71,7 @@ namespace NetworkTrayApp
         static void IconSelector(Object source, System.Timers.ElapsedEventArgs e)
         {
             string iconName = "no-network-w"; // Default to no network
+            int ConnectionStrength = 0;
 
             if (HasInternet())
             {
@@ -75,23 +80,60 @@ namespace NetworkTrayApp
 
                 foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    if (nic.OperationalStatus == OperationalStatus.Up)
+                    if (nic.OperationalStatus != OperationalStatus.Up)
                     {
-                        if (nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)
-                        {
-                            activeWiFi = nic;
-                        }
-                        else if (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
-                        {
-                            activeEthernet = nic;
-                        }
+                        continue;
+                    }
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)
+                    {
+                        activeWiFi = nic;
+                    }
+                    else if (nic.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+                    {
+                        activeEthernet = nic;
                     }
                 }
 
                 // Prioritize Wi-Fi over Ethernet if both are available
                 if (activeWiFi != null)
                 {
-                    iconName = "wi-fi-w";
+                    // Get Signal Strength
+                    ConnectionStrength = GetWiFiSignalStrength(Guid.Parse(activeWiFi.Id));
+                    Debug.WriteLine($"Active Wi-Fi ID: {activeWiFi.Id} for {activeWiFi.Name}");
+                    Debug.WriteLine($"Wi-Fi Signal Strength: {ConnectionStrength}dBm");
+                    string ssid = GetConnectedWiFiSSID(Guid.Parse(activeWiFi.Id));
+                    if (OpenVPNManager.IsInstalled)
+                    {
+                        OpenVPNManager.HandleNetworkChange(ssid);
+                    }
+
+                    if (ConnectionStrength <= -100)
+                    {
+                        iconName = "wi-fi-1";
+                        Debug.WriteLine("Set icon to 1 bar");
+
+                    }
+                    else if (ConnectionStrength <= -80)
+                    {
+                        iconName = "wi-fi-2";
+                        Debug.WriteLine("Set icon to 2 bars");
+                    }
+                    else if (ConnectionStrength <= -70)
+                    {
+                        iconName = "wi-fi-3";
+                        Debug.WriteLine("Set icon to 3 bars");
+
+                    }
+                    else if (ConnectionStrength <= -60)
+                    {
+                        iconName = "wi-fi-4";
+                        Debug.WriteLine("Set icon to 4 bars");
+                    }
+                    else if (ConnectionStrength <= -50)
+                    {
+                        iconName = "wi-fi-full";
+                        Debug.WriteLine("Set icon to full");
+                    }
                 }
                 else if (activeEthernet != null)
                 {
@@ -111,7 +153,7 @@ namespace NetworkTrayApp
 
             string optionsIcon = "options";
 
-            var optionsIco = LoadImageFromResources(optionsIcon);
+            var optionsIco = ImageLoader.LoadImageFromResources(optionsIcon);
 
             if (optionsIco != null)
             {
@@ -123,9 +165,44 @@ namespace NetworkTrayApp
                 };
             }
 
-            string defaultIcon = "pin-outline";
+            string wifiIcon = "wi-fi-full";
+
+            var wifiIco = ImageLoader.LoadImageFromResources(wifiIcon);
+
+            if (wifiIco != null)
+            {
+                WifiButton.Content = new System.Windows.Controls.Image
+                {
+                    Source = wifiIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
+            if (OpenVPNManager.IsInstalled)
+            {
+
+                string vpnIcon = "openvpn";
+
+                var vpnIco = ImageLoader.LoadImageFromResources(vpnIcon);
+
+                if (vpnIco != null)
+                {
+                    VPNButton.Content = new System.Windows.Controls.Image
+                    {
+                        Source = vpnIco,
+                        Width = 16,
+                        Height = 16
+                    };
+                }
+            }
+            else
+            {
+                VPNButton.Visibility = Visibility.Collapsed;
+                NetworkTextBlock.Margin = new Thickness(0, 0, 167, 0);
+            }
+                string defaultIcon = "pin-outline";
             
-            var defaultImage = LoadImageFromResources(defaultIcon);
+            var defaultImage = ImageLoader.LoadImageFromResources(defaultIcon);
 
             if (defaultImage != null)
             {
@@ -152,16 +229,26 @@ namespace NetworkTrayApp
                     .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     .Select(a => a.Address.ToString());
 
+                string networkName = nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 && nic.OperationalStatus == OperationalStatus.Up
+                    ? GetConnectedWiFiSSID(Guid.Parse(nic.Id)) 
+                    : $"{Name}";
+
+                if (string.IsNullOrEmpty(networkName))
+                {
+                    networkName = nic.Name; // Fallback to NIC name if no SSID
+                }
+
                 allAdapters.Add(new NetworkAdapterInfo
                 {
                     Name = nic.Name,
+                    NetName = networkName,
                     Type = $"Type: {nic.NetworkInterfaceType}",
                     Status = $"Status: {nic.OperationalStatus}",
                     IPAddress = ipAddresses.Any() ? $"IP: {string.Join(", ", ipAddresses)}" : "IP: None",
-                    Speed = $"Speed: {BitsToHumanReadable(nic.Speed)}",
-                    SentSpeed = "S: 0 bps",
-                    ReceiveSpeed = "R: 0 bps",
-                    AdapterId = nic.Id
+                    Speed = nic.Speed,
+                    SentSpeed = 0,
+                    ReceiveSpeed = 0,
+                    AdapterId = Guid.Parse(nic.Id),
                 });
             }
 
@@ -231,13 +318,15 @@ namespace NetworkTrayApp
                             sentSpeed = speeds.SentSpeed;
                             recvSpeed = speeds.ReceiveSpeed;
                         }
-                        adapter.SentSpeed = $"S: {BitsToHumanReadable(sentSpeed)}/s";
-                        adapter.ReceiveSpeed = $"R: {BitsToHumanReadable(recvSpeed)}/s";
+                        adapter.SentSpeed = sentSpeed;
+                        adapter.ReceiveSpeed = recvSpeed;
                         //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
                         // Update Graph
                         if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
                         if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
                         
+
+
                         adapter.UploadSpeedValues.Add(sentSpeed);
                         adapter.DownloadSpeedValues.Add(recvSpeed);
                     }
@@ -245,6 +334,52 @@ namespace NetworkTrayApp
                 }
             }
         }
+
+        private static int GetWiFiSignalStrength(Guid adapterid)
+        {
+            try
+            {
+                string connectedSSID = GetConnectedWiFiSSID(adapterid);
+                if (string.IsNullOrEmpty(connectedSSID)) return 0; // No connection
+
+                var wifiNetworks = NativeWifi.EnumerateBssNetworks()
+                    .Where(network => network.Interface.Id == adapterid)
+                    .FirstOrDefault();
+
+                if (wifiNetworks != null)
+                {
+                    return wifiNetworks.SignalStrength; // Return signal strength percentage
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting Wi-Fi signal strength: {ex.Message}");
+            }
+
+            return 0; // Default to 0 if unable to retrieve
+        }
+
+
+        private static string GetConnectedWiFiSSID(Guid adapterid)
+        {
+            try
+            {
+                var activeConnection = NativeWifi.EnumerateInterfaceConnections().FirstOrDefault(x => x.Id == adapterid);
+
+                if (activeConnection != null)
+                {
+                    return activeConnection.ProfileName; // SSID of the connected network
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting connected Wi-Fi SSID: {ex.Message}");
+            }
+
+            return string.Empty; // Return empty if not connected
+        }
+
+
 
         private Dictionary<string, (long PrevSent, long PrevRecv)> previousData = new();
         private Dictionary<string, (long SentSpeed, long ReceiveSpeed)> GetNetworkSpeeds()
@@ -275,14 +410,15 @@ namespace NetworkTrayApp
         public class NetworkAdapterInfo : INotifyPropertyChanged
         {
             public string Name { get; set; }
+            public string NetName { get; set; }
             public string Type { get; set; }
             public string Status { get; set; }
             public string IPAddress { get; set; }
-            public string Speed { get; set; }
-            public string AdapterId { get; set; }
+            public long Speed { get; set; }
+            public Guid AdapterId { get; set; }
 
-            private string sentSpeed;
-            public string SentSpeed
+            private long sentSpeed;
+            public long SentSpeed
             {
                 get => sentSpeed;
                 set
@@ -295,8 +431,8 @@ namespace NetworkTrayApp
                 }
             }
 
-            private string receiveSpeed;
-            public string ReceiveSpeed
+            private long receiveSpeed;
+            public long ReceiveSpeed
             {
                 get => receiveSpeed;
                 set
@@ -326,7 +462,7 @@ namespace NetworkTrayApp
                         Fill = new SolidColorPaint(new SKColor(0, 200, 255, 100)),
                         GeometrySize = 0,
                         Stroke = new SolidColorPaint(new SKColor(0, 200, 255)), // Light blue for download
-                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
+                        YToolTipLabelFormatter = point => new BitsToHumanConverter().Convert(point.Model, null, null, null).ToString()
 
                     },
                     new LineSeries<long>
@@ -335,7 +471,7 @@ namespace NetworkTrayApp
                         Fill = new SolidColorPaint(new SKColor(0, 255, 0, 100)),
                         GeometrySize = 0,
                         Stroke = new SolidColorPaint(new SKColor(0, 255, 0)), // Green for upload
-                        YToolTipLabelFormatter = point => BitsToHumanReadable(point.Model)
+                        YToolTipLabelFormatter = point => new BitsToHumanConverter().Convert(point.Model, null, null, null).ToString()
                     }
                 };
             }
@@ -428,6 +564,7 @@ namespace NetworkTrayApp
                     info += $"Status: {nic.OperationalStatus}\n";
                     info += $"Type: {nic.NetworkInterfaceType}\n";
                     info += $"Description: {nic.Description}\n";
+                    info += $"MAC Address: {nic.GetPhysicalAddress()}\n";
 
                     // Get IP addresses
                     var ipProps = nic.GetIPProperties();
@@ -452,7 +589,7 @@ namespace NetworkTrayApp
                         info += $"DNS Servers: {string.Join(", ", dnsServers)}\n";
 
                     // Get Speeeeed
-                    info += $"Speed: {BitsToHumanReadable(nic.Speed)}\n";
+                    info += $"Speed: {new BitsToHumanConverter().Convert(nic.Speed, null, null, null).ToString()}\n";
 
                     info += "\n--------------------------------\n";
                 }
@@ -461,22 +598,15 @@ namespace NetworkTrayApp
             return string.IsNullOrEmpty(info) ? "No active network adapters found." : info;
         }
 
-        static string BitsToHumanReadable(long bits)
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            string[] units = { "b", "Kb", "Mb", "Gb", "Tb", "Pb", "Eb" };
-            double size = bits;
-            int unitIndex = 0;
-
-            while (size >= 1000 && unitIndex < units.Length - 1)
-            {
-                size /= 1000;
-                unitIndex++;
-            }
-
-            return $"{size:0.##} {units[unitIndex]}";
+            WindowHelper.ApplyBlurEffect(this);
         }
 
-        private void TrayIcon_MouseClick(object sender, System.Windows.Forms.MouseEventArgs e)
+
+
+        private void TrayIcon_MouseClick(object sender, MouseEventArgs e)
         {
             if (e.Button == System.Windows.Forms.MouseButtons.Left)
             {
@@ -493,7 +623,7 @@ namespace NetworkTrayApp
 
             string iconName = isPinned ? "pin-solid" : "pin-outline";
 
-            var newIcon = LoadImageFromResources(iconName);
+            var newIcon = ImageLoader.LoadImageFromResources(iconName);
 
             if (newIcon != null)
             {
@@ -513,44 +643,29 @@ namespace NetworkTrayApp
             optionsWindow.ShowDialog();
         }
 
+        private void WifiButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine("Wireless button clicked");
+            WirelessWindow wirelessWindow = new WirelessWindow(this);
+            wirelessWindow.ShowDialog();
+        }
+
+        private void VPNButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!OpenVPNManager.IsInstalled)
+            {
+                return;
+            }
+            Debug.WriteLine("VPN button clicked");
+            VPNWindow vpnWindow = new VPNWindow(this);
+            vpnWindow.ShowDialog();
+        }
 
         private void PositionWindowNearTray()
         {
             var screen = System.Windows.SystemParameters.WorkArea;
             this.Left = screen.Right - this.Width - 10;
             this.Top = screen.Bottom - this.Height - 10;
-        }
-        private static System.Windows.Media.Imaging.BitmapImage LoadImageFromResources(string resourceName)
-        {
-            object resource = XaiNet2.Properties.Resources.ResourceManager.GetObject(resourceName);
-
-            if (resource == null)
-            {
-                return null;
-            }
-
-            try
-            {
-                if (resource is byte[] imageBytes) // WPF stores .ico as byte[]
-                {
-                    using (MemoryStream memory = new MemoryStream(imageBytes))
-                    {
-                        var bitmapImage = new System.Windows.Media.Imaging.BitmapImage();
-                        bitmapImage.BeginInit();
-                        bitmapImage.StreamSource = memory;
-                        bitmapImage.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                        bitmapImage.EndInit();
-
-                        return bitmapImage;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error loading image '{resourceName}': {ex.Message}");
-            }
-
-            return null;
         }
 
         public void SetMyrkurMode(bool enable)
@@ -571,7 +686,7 @@ namespace NetworkTrayApp
         {
             if (!isPinned)
             {
-                this.Hide(); // Hides the window when clicking outside unless pinned
+                Hide(); // Hides the window when clicking outside unless pinned
             }
         }
 

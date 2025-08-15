@@ -1,0 +1,97 @@
+﻿<Window x:Class="XaiNet2.Menus.ProfilesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wi-Fi" Width="350" Height="400"
+        Background="Transparent"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Loaded="Window_Loaded"
+        Deactivated="Window_Deactivated">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Helpers/Themes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Border x:Name="BlurredBackground" Background="#55000000" CornerRadius="10"/>
+        <Border CornerRadius="10" Background="#AA222222" Padding="10">
+            <Grid>
+                <Grid VerticalAlignment="Top"
+                      HorizontalAlignment="Left"
+                      ShowGridLines="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Saved Profiles"
+                               Foreground="White"
+                               FontSize="16"
+                               Margin="0,0,200,0"
+                               Grid.Column="0"
+                               Grid.Row="0"/>
+                    <Button Name="HomeButton"
+                            Click="HomeButton_Click"
+                            Width="32" Height="32"
+                            ToolTip="Home"
+                            Background="Transparent" 
+                            Foreground="White"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Grid.Column="1"
+                            Grid.Row="0"/>
+                </Grid>
+                <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
+                    </ScrollViewer.Resources>
+                    <StackPanel Name="ProfilePanel">
+                        <StackPanel Name="ProfilesListPanel">
+                            <TextBlock Text="No saved profiles found."
+                                       Foreground="LightGray"
+                                       Name="NoProfilesTextBlock"/>
+                        </StackPanel>
+                        <ItemsControl x:Name="ProfilesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="5" Padding="5" Background="#AA333333" CornerRadius="5">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="160"/>
+                                                <ColumnDefinition Width="75"/>
+                                                <ColumnDefinition Width="75"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}" 
+                                                        Foreground="White"
+                                                        VerticalAlignment="Center"
+                                                        Grid.Column="0"/>
+                                            <Button Content="Connect"
+                                                    Click="ConnectButton_Click"
+                                                    Style="{StaticResource CustomButton}"
+                                                    Margin="0,0,5,0"
+                                                    Grid.Column="1"/>
+                                            <Button Content="Delete"
+                                                    Click="DeleteButton_Click"
+                                                    Style="{StaticResource CustomButton}"
+                                                    Margin="0,0,5,0"
+                                                    Grid.Column="2"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

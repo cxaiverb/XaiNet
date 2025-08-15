@@ -42,8 +42,15 @@ namespace XaiNet2
             // Apply Myrkur Mode to Options Window
             this.SetMyrkurMode(myrkurModeEnabled);
 
-            ConfigDirTextBox.Text = OpenVPNManager.ConfigDirectory;
-            LogDirTextBox.Text = OpenVPNManager.LogDirectory;
+            if (OpenVPNManager.IsInstalled)
+            {
+                ConfigDirTextBox.Text = OpenVPNManager.ConfigDirectory;
+                LogDirTextBox.Text = OpenVPNManager.LogDirectory;
+            }
+            else
+            {
+                OpenVPNPathsExpander.Visibility = Visibility.Collapsed;
+            }
 
         }
         private void Window_Loaded(object sender, RoutedEventArgs e)

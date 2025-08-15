@@ -55,7 +55,7 @@
 
 
                     <!-- OpenVPN Paths Expander -->
-                    <Expander Header="OpenVPN Paths" Foreground="White" FontSize="14">
+                    <Expander x:Name="OpenVPNPathsExpander" Header="OpenVPN Paths" Foreground="White" FontSize="14">
                         <Expander.Resources>
                             <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
                         </Expander.Resources>

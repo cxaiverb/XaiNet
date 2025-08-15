@@ -25,19 +25,36 @@ namespace XaiNet2.Helpers
         private static readonly string? openVpnGuiExecutable = LocateOpenVpnGui();
         static OpenVPNManager()
         {
-            configDirectory = string.IsNullOrWhiteSpace(Settings.Default.OpenVpnConfigDir)
-                ? GetDefaultConfigDir()
-                : Settings.Default.OpenVpnConfigDir;
-            logDirectory = string.IsNullOrWhiteSpace(Settings.Default.OpenVpnLogDir)
-                ? GetDefaultLogDir()
-                : Settings.Default.OpenVpnLogDir;
+            if (openVpnGuiExecutable != null)
+            {
+                configDirectory = string.IsNullOrWhiteSpace(Settings.Default.OpenVpnConfigDir)
+                    ? GetDefaultConfigDir()
+                    : Settings.Default.OpenVpnConfigDir;
+                logDirectory = string.IsNullOrWhiteSpace(Settings.Default.OpenVpnLogDir)
+                    ? GetDefaultLogDir()
+                    : Settings.Default.OpenVpnLogDir;
 
-            Directory.CreateDirectory(configDirectory);
-            Directory.CreateDirectory(logDirectory);
+                try
+                {
+                    Directory.CreateDirectory(configDirectory);
+                    Directory.CreateDirectory(logDirectory);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error creating OpenVPN directories: {ex.Message}");
+                }
 
-            profiles = LoadProfilesInternal();
+                profiles = LoadProfilesInternal();
+            }
+            else
+            {
+                configDirectory = Path.Combine(AppContext.BaseDirectory, "openvpn_configs");
+                logDirectory = Path.Combine(AppContext.BaseDirectory, "openvpn_logs");
+                profiles = new List<OpenVpnProfile>();
+            }
         }
 
+        public static bool IsInstalled => !string.IsNullOrEmpty(openVpnGuiExecutable);
         private static string? LocateOpenVpnGui()
         {
             string[] exeNames = Environment.OSVersion.Platform == PlatformID.Win32NT

@@ -102,7 +102,10 @@ namespace NetworkTrayApp
                     Debug.WriteLine($"Active Wi-Fi ID: {activeWiFi.Id} for {activeWiFi.Name}");
                     Debug.WriteLine($"Wi-Fi Signal Strength: {ConnectionStrength}dBm");
                     string ssid = GetConnectedWiFiSSID(Guid.Parse(activeWiFi.Id));
-                    OpenVPNManager.HandleNetworkChange(ssid);
+                    if (OpenVPNManager.IsInstalled)
+                    {
+                        OpenVPNManager.HandleNetworkChange(ssid);
+                    }
 
                     if (ConnectionStrength <= -100)
                     {
@@ -175,20 +178,29 @@ namespace NetworkTrayApp
                     Height = 16
                 };
             }
-            string vpnIcon = "openvpn";
-
-            var vpnIco = ImageLoader.LoadImageFromResources(vpnIcon);
-
-            if (vpnIco != null)
+            if (OpenVPNManager.IsInstalled)
             {
-                VPNButton.Content = new System.Windows.Controls.Image
+
+                string vpnIcon = "openvpn";
+
+                var vpnIco = ImageLoader.LoadImageFromResources(vpnIcon);
+
+                if (vpnIco != null)
                 {
-                    Source = vpnIco,
-                    Width = 16,
-                    Height = 16
-                };
+                    VPNButton.Content = new System.Windows.Controls.Image
+                    {
+                        Source = vpnIco,
+                        Width = 16,
+                        Height = 16
+                    };
+                }
             }
-            string defaultIcon = "pin-outline";
+            else
+            {
+                VPNButton.Visibility = Visibility.Collapsed;
+                NetworkTextBlock.Margin = new Thickness(0, 0, 167, 0);
+            }
+                string defaultIcon = "pin-outline";
             
             var defaultImage = ImageLoader.LoadImageFromResources(defaultIcon);
 
@@ -640,6 +652,10 @@ namespace NetworkTrayApp
 
         private void VPNButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!OpenVPNManager.IsInstalled)
+            {
+                return;
+            }
             Debug.WriteLine("VPN button clicked");
             VPNWindow vpnWindow = new VPNWindow(this);
             vpnWindow.ShowDialog();

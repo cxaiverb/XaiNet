@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ManagedNativeWifi;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,8 +8,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using ManagedNativeWifi;
 using XaiNet2.Helpers;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 
 namespace XaiNet2.Menus
@@ -58,6 +59,15 @@ namespace XaiNet2.Menus
                         .EnumerateProfiles()
                         .Where(p => !string.IsNullOrWhiteSpace(p.Name))
                         .Select(p => new WiFiProfile { Name = p.Name }));
+
+                    if (profiles.Count == 0)
+                    {
+                        NoProfilesTextBlock.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        NoProfilesTextBlock.Visibility = Visibility.Collapsed;
+                    }
                 }
             }
             catch (Exception ex)

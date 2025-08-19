@@ -35,12 +35,22 @@ namespace XaiNet2
             if (!HasWiFiAdapter())
             {
                 NoWiFiTextBlock.Visibility = Visibility.Visible;
+                WiFiDisabledTextBlock.Visibility = Visibility.Collapsed;
                 Debug.WriteLine("Wireless adapter not found :(");
+                Loaded += OnLoaded;
+                return;
+            }
+            if (WiFiDisabled())
+            {
+                WiFiDisabledTextBlock.Visibility = Visibility.Visible;
+                NoWiFiTextBlock.Visibility = Visibility.Collapsed;
+                Debug.WriteLine("WiFi was turned off, no wifis to show");
                 Loaded += OnLoaded;
                 return;
             }
 
             NoWiFiTextBlock.Visibility = Visibility.Collapsed;
+            WiFiDisabledTextBlock.Visibility = Visibility.Collapsed;
 
             LoadWiFiNetworks();
             Loaded += OnLoaded;
@@ -98,6 +108,19 @@ namespace XaiNet2
                     Height = 16
                 };
             }
+
+            string powerIcon = "power";
+            var powerIco = ImageLoader.LoadImageFromResources(powerIcon);
+
+            if (powerIco != null)
+            {
+                ToggleButton.Content = new Image
+                {
+                    Source = powerIco,
+                    Width = 16,
+                    Height = 16
+                };
+            }
         }
 
         private bool HasWiFiAdapter()
@@ -105,7 +128,13 @@ namespace XaiNet2
             return NetworkInterface.GetAllNetworkInterfaces()
                 .Any(nic => nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211);
         }
-
+        private bool WiFiDisabled()
+        {
+            var wifi = NativeWifi.EnumerateInterfaceConnections()
+                .FirstOrDefault();
+            bool wifiDisabled = wifi != null && !wifi.IsRadioOn;
+            return wifiDisabled;
+        }
         private void PositionNearMainWindow(MainWindow owner)
         {
             // Get position from owner
@@ -163,6 +192,23 @@ namespace XaiNet2
         public static Task RefreshAsync()
         {
             return NativeWifi.ScanNetworksAsync(timeout: TimeSpan.FromSeconds(10));
+        }
+
+        private void ToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            var iface = NativeWifi.EnumerateInterfaceConnections().FirstOrDefault();
+
+            bool wifiDisabled = iface != null && !iface.IsRadioOn;
+
+            if (wifiDisabled == true)
+            {
+                NativeWifi.TurnOnInterfaceRadio(iface.Id);
+            }
+            else
+            {
+                NativeWifi.TurnOffInterfaceRadio(iface.Id);
+            }
+
         }
 
         public void ConnectToWiFi_Click(object sender, RoutedEventArgs e)

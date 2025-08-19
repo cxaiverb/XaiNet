@@ -27,6 +27,8 @@ namespace XaiNet2.Menus
             Owner = owner;
             PositionNearOwner();
             Loaded += OnLoaded;
+            bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
+            this.SetMyrkurMode(myrkurModeEnabled);
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)

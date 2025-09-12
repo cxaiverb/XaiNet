@@ -34,7 +34,8 @@ namespace NetworkTrayApp
             SetupTrayIcon();
             LoadNetworkAdapters();
             LoadSavedAdapterSettings();
-            PositionWindowNearTray();
+            var screen = GetScreenAtCursor();
+            PositionWindowNearTray(screen);
             this.Hide();
             updateTimer = new DispatcherTimer();
             updateTimer.Interval = TimeSpan.FromSeconds(1);
@@ -612,7 +613,8 @@ namespace NetworkTrayApp
             {
                 this.Show();
                 this.Activate();
-                PositionWindowNearTray();
+                var screen = GetScreenAtCursor();
+                PositionWindowNearTray(screen);
             }
         }
         private bool isPinned = false;
@@ -661,11 +663,27 @@ namespace NetworkTrayApp
             vpnWindow.ShowDialog();
         }
 
-        private void PositionWindowNearTray()
+        private void PositionWindowNearTray(Screen screen)
         {
-            var screen = System.Windows.SystemParameters.WorkArea;
-            this.Left = screen.Right - this.Width - 10;
-            this.Top = screen.Bottom - this.Height - 10;
+            if (screen == null)
+            {
+                // If there is no specific screen, use primary
+                screen = Screen.PrimaryScreen;
+            }
+
+            Left = screen.WorkingArea.Right - Width - 10;
+            Top = screen.WorkingArea.Bottom - Height - 10;
+        }
+        private Screen GetScreenAtCursor()
+        {
+            foreach(var screen in Screen.AllScreens)
+            {
+                if (screen.Bounds.Contains(System.Windows.Forms.Control.MousePosition))
+                {
+                    return screen;
+                }
+            }
+            return Screen.PrimaryScreen;
         }
 
         public void SetMyrkurMode(bool enable)

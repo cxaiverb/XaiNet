@@ -1,38 +1,111 @@
-﻿<Window x:Class="XaiNet2.Menus.InputWindow"
+<Window x:Class="XaiNet2.Menus.InputWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Input" Width="250" Height="100"
+        Title="Connect"
+        Width="360" Height="220"
         Background="Transparent"
         AllowsTransparency="True"
         WindowStyle="None"
         ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
         Topmost="True"
         ShowInTaskbar="False"
-        Loaded="Window_Loaded"
-        Deactivated="Window_Deactivated">
+        KeyDown="Window_KeyDown"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Helpers/Themes.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <Border CornerRadius="10" Background="#AA222222" Padding="10">
-            <StackPanel>
-                <TextBlock x:Name="SSIDLabel"  Text="{Binding SSID}" Foreground="White" Margin="0,0,0,5"/>
-                    <PasswordBox Name="pwdBox" 
-                             Width="200" 
-                             Height="25" 
-                             Background="White" 
-                             Foreground="Black"/>
-                    <Button Name="SubmitButton" 
-                        Content="Submit" 
-                        Width="75" 
-                        Height="25" 
-                        Margin="0,5,0,0"
-                        Click="SubmitButton_Click"/>
-            </StackPanel>
+        <Border x:Name="BlurredBackground" Background="#55000000" CornerRadius="10"/>
+        <Border CornerRadius="10" Background="#AA222222" Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Section label -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock Text="🔒"
+                               FontSize="14"
+                               Foreground="{StaticResource Accent.Lock}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Connect to network"
+                               Foreground="LightGray"
+                               Margin="8,0,0,0"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- SSID -->
+                <TextBlock Grid.Row="1"
+                           x:Name="SSIDLabel"
+                           Foreground="White"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,2,0,16"/>
+
+                <!-- Password input + reveal toggle -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0">
+                        <PasswordBox x:Name="pwdBox"
+                                     Style="{StaticResource DarkPasswordBoxStyle}"/>
+                        <TextBox x:Name="pwdPlain"
+                                 Style="{StaticResource DarkTextBoxStyle}"
+                                 Visibility="Collapsed"/>
+                    </Grid>
+                    <Button Grid.Column="1"
+                            x:Name="ShowPasswordButton"
+                            Content="Show"
+                            Style="{StaticResource CustomButton}"
+                            Click="ShowPasswordButton_Click"
+                            Width="68"
+                            Margin="8,0,0,0"
+                            ToolTip="Reveal or hide password"/>
+                </Grid>
+
+                <!-- Caps-lock hint -->
+                <TextBlock Grid.Row="3"
+                           x:Name="CapsLockHint"
+                           Text="⚠ Caps Lock is on"
+                           Foreground="#F5C842"
+                           FontSize="11"
+                           Margin="2,8,0,0"
+                           VerticalAlignment="Top"
+                           Visibility="Collapsed"/>
+
+                <!-- Action row -->
+                <StackPanel Grid.Row="4"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Margin="0,16,0,0">
+                    <Button x:Name="CancelButton"
+                            Content="Cancel"
+                            Style="{StaticResource CustomButton}"
+                            Width="84"
+                            Margin="0,0,8,0"
+                            Click="CancelButton_Click"
+                            IsCancel="True"/>
+                    <Button x:Name="ConnectButton"
+                            Content="Connect"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="100"
+                            IsDefault="True"
+                            Click="SubmitButton_Click"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

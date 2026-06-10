@@ -4,13 +4,13 @@ using System.Windows;
 using System.Windows.Forms;
 using Application = System.Windows.Application;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.IO;
 using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Threading;
-using System.Management;
 using XaiNet2;
 using LiveChartsCore;
 using System.Collections.ObjectModel;
@@ -20,7 +20,7 @@ using SkiaSharp;
 using ManagedNativeWifi;
 using XaiNet2.Helpers;
 
-namespace NetworkTrayApp
+namespace XaiNet2.Menus
 {
     public partial class MainWindow : Window
     {
@@ -33,8 +33,8 @@ namespace NetworkTrayApp
             InitializeComponent();
             SetupTrayIcon();
             LoadNetworkAdapters();
-            LoadSavedAdapterSettings();
-            PositionWindowNearTray();
+            var screen = GetScreenAtCursor();
+            PositionWindowNearTray(screen);
             this.Hide();
             updateTimer = new DispatcherTimer();
             updateTimer.Interval = TimeSpan.FromSeconds(1);
@@ -42,20 +42,98 @@ namespace NetworkTrayApp
             updateTimer.Start();
 
             this.Loaded += OnLoaded;
+            this.Closed += OnClosed;
+
+            // VPN auto-connect: react to any adapter address change, not just WiFi-icon ticks
+            NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
 
             bool myrkurModeEnabled = XaiNet2.Properties.Settings.Default.MyrkurMode;
             this.SetMyrkurMode(myrkurModeEnabled);
 
         }
 
-        static bool HasInternet()
+        private void OnNetworkAddressChanged(object sender, EventArgs e)
+        {
+            // Fires on a thread-pool thread. Do the VPN auto-connect work here (thread-safe),
+            // and marshal the adapter-list refresh onto the UI thread.
+            try
+            {
+                if (OpenVPNManager.IsInstalled)
+                {
+                    var wifi = NetworkInterface.GetAllNetworkInterfaces()
+                        .FirstOrDefault(n => n.OperationalStatus == OperationalStatus.Up
+                                          && n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211);
+                    string ssid = wifi != null ? GetConnectedWiFiSSID(ParseAdapterId(wifi.Id)) : null;
+                    OpenVPNManager.HandleNetworkChange(ssid);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"NetworkAddressChanged handler failed: {ex.Message}");
+                Logger.Error("NetworkAddressChanged handler failed", ex);
+            }
+
+            // Update the tray icon right away rather than waiting for the next 5s tick.
+            try { SelectAndApplyTrayIcon(); }
+            catch (Exception ex) { Debug.WriteLine($"Tray refresh on network change failed: {ex.Message}"); }
+
+            var dispatcher = Application.Current?.Dispatcher;
+            dispatcher?.BeginInvoke(new Action(() =>
+            {
+                try { RefreshAdapterMetadata(); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"RefreshAdapterMetadata failed: {ex.Message}");
+                    Logger.Error("RefreshAdapterMetadata failed", ex);
+                }
+            }));
+        }
+
+        // NIC IDs are GUID strings on Windows, but parse defensively so a single odd adapter
+        // can't take down the whole adapter list.
+        private static Guid ParseAdapterId(string id)
+            => Guid.TryParse(id, out var g) ? g : Guid.Empty;
+
+        private void OnClosed(object sender, EventArgs e)
+        {
+            NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+            updateTimer?.Stop();
+            updateTimer = null;
+            if (iconTimer != null)
+            {
+                iconTimer.Stop();
+                iconTimer.Elapsed -= IconSelector;
+                iconTimer.Dispose();
+                iconTimer = null;
+            }
+            if (trayIcon != null)
+            {
+                trayIcon.Visible = false;
+                var oldIcon = trayIcon.Icon;
+                trayIcon.Icon = null;
+                oldIcon?.Dispose();
+                trayIcon.Dispose();
+                trayIcon = null;
+            }
+            currentTrayIcon?.Dispose();
+            currentTrayIcon = null;
+        }
+
+        // Lightweight reachability check: any active adapter with a non-loopback IP.
+        // Replaces the previous ICMP ping to google.com which fails on networks blocking ICMP.
+        static bool HasNetworkConnectivity(NetworkInterface[] nics)
         {
             try
             {
-                using (Ping ping = new Ping())
+                if (!NetworkInterface.GetIsNetworkAvailable()) return false;
+                foreach (var nic in nics)
                 {
-                    PingReply reply = ping.Send("google.com", 1000); // 1-second timeout
-                    if (reply != null && reply.Status == IPStatus.Success)
+                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Tunnel) continue;
+                    var props = nic.GetIPProperties();
+                    if (props.UnicastAddresses.Any(a =>
+                        a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork))
                     {
                         return true;
                     }
@@ -63,22 +141,38 @@ namespace NetworkTrayApp
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"HasInternet method failed with {ex.Message}");
+                Debug.WriteLine($"HasNetworkConnectivity failed: {ex.Message}");
             }
             return false;
         }
 
         static void IconSelector(Object source, System.Timers.ElapsedEventArgs e)
         {
-            string iconName = "no-network-w"; // Default to no network
-            int ConnectionStrength = 0;
+            try
+            {
+                SelectAndApplyTrayIcon();
+            }
+            catch (Exception ex)
+            {
+                // System.Timers.Timer swallows handler exceptions, so capture them ourselves.
+                Debug.WriteLine($"IconSelector failed: {ex.Message}");
+                Logger.Error("IconSelector failed", ex);
+            }
+        }
 
-            if (HasInternet())
+        static void SelectAndApplyTrayIcon()
+        {
+            string iconName = "no-network-w"; // Default to no network
+
+            // Enumerate once and reuse across the connectivity / active-NIC / VPN checks.
+            var nics = NetworkInterface.GetAllNetworkInterfaces();
+
+            if (HasNetworkConnectivity(nics))
             {
                 NetworkInterface activeEthernet = null;
                 NetworkInterface activeWiFi = null;
 
-                foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
+                foreach (NetworkInterface nic in nics)
                 {
                     if (nic.OperationalStatus != OperationalStatus.Up)
                     {
@@ -94,129 +188,156 @@ namespace NetworkTrayApp
                     }
                 }
 
+                bool vpnUp = IsVpnConnected(nics);
+
                 // Prioritize Wi-Fi over Ethernet if both are available
                 if (activeWiFi != null)
                 {
-                    // Get Signal Strength
-                    ConnectionStrength = GetWiFiSignalStrength(Guid.Parse(activeWiFi.Id));
-                    Debug.WriteLine($"Active Wi-Fi ID: {activeWiFi.Id} for {activeWiFi.Name}");
-                    Debug.WriteLine($"Wi-Fi Signal Strength: {ConnectionStrength}dBm");
-                    string ssid = GetConnectedWiFiSSID(Guid.Parse(activeWiFi.Id));
-                    if (OpenVPNManager.IsInstalled)
+                    if (vpnUp)
                     {
-                        OpenVPNManager.HandleNetworkChange(ssid);
+                        iconName = "wifi-vpn";
                     }
+                    else
+                    {
+                        // ManagedNativeWifi reports SignalStrength as a 0-100 percentage,
+                        // not RSSI in dBm. Pick a bar count from the percentage.
+                        int signal = GetWiFiSignalStrength(ParseAdapterId(activeWiFi.Id));
+                        Debug.WriteLine($"Active Wi-Fi ID: {activeWiFi.Id} for {activeWiFi.Name}");
+                        Debug.WriteLine($"Wi-Fi Signal Strength: {signal}%");
 
-                    if (ConnectionStrength <= -100)
-                    {
-                        iconName = "wi-fi-1";
-                        Debug.WriteLine("Set icon to 1 bar");
-
-                    }
-                    else if (ConnectionStrength <= -80)
-                    {
-                        iconName = "wi-fi-2";
-                        Debug.WriteLine("Set icon to 2 bars");
-                    }
-                    else if (ConnectionStrength <= -70)
-                    {
-                        iconName = "wi-fi-3";
-                        Debug.WriteLine("Set icon to 3 bars");
-
-                    }
-                    else if (ConnectionStrength <= -60)
-                    {
-                        iconName = "wi-fi-4";
-                        Debug.WriteLine("Set icon to 4 bars");
-                    }
-                    else if (ConnectionStrength <= -50)
-                    {
-                        iconName = "wi-fi-full";
-                        Debug.WriteLine("Set icon to full");
+                        if (signal >= 90) iconName = "wi-fi-full";
+                        else if (signal >= 70) iconName = "wi-fi-4";
+                        else if (signal >= 50) iconName = "wi-fi-3";
+                        else if (signal >= 25) iconName = "wi-fi-2";
+                        else iconName = "wi-fi-1";
                     }
                 }
                 else if (activeEthernet != null)
                 {
-                    iconName = "wired-network-connection-w";
+                    iconName = vpnUp ? "wired-vpn" : "wired-network-connection-w";
                 }
             }
 
+            UpdateTrayIcon(iconName);
+        }
 
+        // Heuristic VPN detection for the tray icon: an OpenVPN connection we started, a tunnel-type
+        // adapter that's up, or an up adapter whose name/description looks like a VPN driver.
+        private static bool IsVpnConnected(NetworkInterface[] nics)
+        {
+            try
+            {
+                if (OpenVPNManager.IsInstalled && OpenVPNManager.HasActiveConnections) return true;
+            }
+            catch { /* ignore */ }
 
-            trayIcon.Icon = new Icon(new MemoryStream((byte[])XaiNet2.Properties.Resources.ResourceManager.GetObject(iconName)));
-            
+            try
+            {
+                foreach (var nic in nics)
+                {
+                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Tunnel) return true;
+
+                    string id = $"{nic.Description} {nic.Name}".ToLowerInvariant();
+                    if (id.Contains("vpn") || id.Contains("openvpn") || id.Contains("wireguard")
+                        || id.Contains("tailscale") || id.Contains("tap-windows") || id.Contains("wintun"))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch { /* ignore */ }
+
+            return false;
+        }
+
+        // Tracks the Icon currently held by trayIcon so we can dispose it on swap.
+        // NotifyIcon does not own its Icon — assigning a new one leaks the old GDI handle.
+        private static Icon currentTrayIcon;
+
+        static void UpdateTrayIcon(string iconName)
+        {
+            var bytes = XaiNet2.Properties.Resources.ResourceManager.GetObject(iconName) as byte[];
+            if (bytes == null) return;
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null) return;
+
+            void apply()
+            {
+                if (trayIcon == null) return;
+                Icon newIcon;
+                using (var ms = new MemoryStream(bytes))
+                {
+                    // Load the frame that matches the tray's small-icon size (scales with DPI) so the
+                    // icon stays crisp instead of NotifyIcon down-scaling a large frame.
+                    newIcon = new Icon(ms, SystemInformation.SmallIconSize);
+                }
+                var old = currentTrayIcon;
+                currentTrayIcon = newIcon;
+                trayIcon.Icon = newIcon;
+                old?.Dispose();
+            }
+
+            if (dispatcher.CheckAccess()) apply();
+            else dispatcher.Invoke(apply);
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             Debug.WriteLine("Loading icons...");
+            ApplyNerdStats();
 
-            string optionsIcon = "options";
+            OptionsButton.Content = ImageLoader.CreateIcon("options");
+            WifiButton.Content = ImageLoader.CreateIcon("wi-fi-full");
+            PinButton.Content = ImageLoader.CreateIcon("pin-outline");
 
-            var optionsIco = ImageLoader.LoadImageFromResources(optionsIcon);
-
-            if (optionsIco != null)
-            {
-                OptionsButton.Content = new System.Windows.Controls.Image
-                {
-                    Source = optionsIco,
-                    Width = 16,
-                    Height = 16
-                };
-            }
-
-            string wifiIcon = "wi-fi-full";
-
-            var wifiIco = ImageLoader.LoadImageFromResources(wifiIcon);
-
-            if (wifiIco != null)
-            {
-                WifiButton.Content = new System.Windows.Controls.Image
-                {
-                    Source = wifiIco,
-                    Width = 16,
-                    Height = 16
-                };
-            }
             if (OpenVPNManager.IsInstalled)
             {
-
-                string vpnIcon = "openvpn";
-
-                var vpnIco = ImageLoader.LoadImageFromResources(vpnIcon);
-
-                if (vpnIco != null)
-                {
-                    VPNButton.Content = new System.Windows.Controls.Image
-                    {
-                        Source = vpnIco,
-                        Width = 16,
-                        Height = 16
-                    };
-                }
+                VPNButton.Content = ImageLoader.CreateIcon("openvpn");
             }
             else
             {
                 VPNButton.Visibility = Visibility.Collapsed;
-                NetworkTextBlock.Margin = new Thickness(0, 0, 167, 0);
             }
-                string defaultIcon = "pin-outline";
-            
-            var defaultImage = ImageLoader.LoadImageFromResources(defaultIcon);
 
-            if (defaultImage != null)
+            if (!TailscaleManager.IsInstalled)
             {
-                PinButton.Content = new System.Windows.Controls.Image
-                {
-                    Source = defaultImage,
-                    Width = 16,
-                    Height = 16
-                };
+                TailscaleButton.Visibility = Visibility.Collapsed;
+            }
+
+            // Show the correct tray icon immediately instead of waiting for the first 5s tick,
+            // and auto-connect any VPN bound to the network we're already on.
+            SelectAndApplyTrayIcon();
+            TriggerVpnAutoConnect();
+        }
+
+        // Checks the current Wi-Fi SSID and lets OpenVPNManager auto-connect a profile bound to it.
+        private static void TriggerVpnAutoConnect()
+        {
+            if (!OpenVPNManager.IsInstalled) return;
+            try
+            {
+                var wifi = NetworkInterface.GetAllNetworkInterfaces()
+                    .FirstOrDefault(n => n.OperationalStatus == OperationalStatus.Up
+                                      && n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211);
+                string ssid = wifi != null ? GetConnectedWiFiSSID(ParseAdapterId(wifi.Id)) : null;
+                OpenVPNManager.HandleNetworkChange(ssid);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TriggerVpnAutoConnect failed: {ex.Message}");
             }
         }
 
         private List<NetworkAdapterInfo> allAdapters = new List<NetworkAdapterInfo>(); // Store all adapters
         private HashSet<string> visibleAdapters = new HashSet<string>(); // Store user-selected visible adapters
+        // Every adapter id we've ever shown this session. Used so a hidden adapter that disappears
+        // and comes back isn't force-shown again — only truly first-seen adapters auto-show.
+        private readonly HashSet<Guid> knownAdapterIds = new HashSet<Guid>();
+        // Tracks whether we've already auto-expanded the lone visible adapter, so we don't re-expand
+        // it on every refresh after the user collapses it.
+        private bool singleAdapterAutoExpanded;
 
         private void LoadNetworkAdapters()
         {
@@ -224,35 +345,111 @@ namespace NetworkTrayApp
 
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
-                var ipProps = nic.GetIPProperties();
-                var ipAddresses = ipProps.UnicastAddresses
-                    .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    .Select(a => a.Address.ToString());
-
-                string networkName = nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 && nic.OperationalStatus == OperationalStatus.Up
-                    ? GetConnectedWiFiSSID(Guid.Parse(nic.Id)) 
-                    : $"{Name}";
-
-                if (string.IsNullOrEmpty(networkName))
-                {
-                    networkName = nic.Name; // Fallback to NIC name if no SSID
-                }
-
-                allAdapters.Add(new NetworkAdapterInfo
-                {
-                    Name = nic.Name,
-                    NetName = networkName,
-                    Type = $"Type: {nic.NetworkInterfaceType}",
-                    Status = $"Status: {nic.OperationalStatus}",
-                    IPAddress = ipAddresses.Any() ? $"IP: {string.Join(", ", ipAddresses)}" : "IP: None",
-                    Speed = nic.Speed,
-                    SentSpeed = 0,
-                    ReceiveSpeed = 0,
-                    AdapterId = Guid.Parse(nic.Id),
-                });
+                if (!Guid.TryParse(nic.Id, out var gid)) continue;
+                knownAdapterIds.Add(gid);
+                allAdapters.Add(CreateAdapterInfo(nic, gid));
             }
 
             LoadSavedAdapterSettings(); // Ensure visibility settings are applied
+        }
+
+        private static NetworkAdapterInfo CreateAdapterInfo(NetworkInterface nic, Guid gid)
+        {
+            var info = new NetworkAdapterInfo { Name = nic.Name, AdapterId = gid };
+            PopulateAdapterInfo(info, nic);
+            return info;
+        }
+
+        // Fills the live/display fields from a NIC. Safe to call repeatedly — NetworkAdapterInfo
+        // raises change notifications, so bound UI updates in place.
+        private static void PopulateAdapterInfo(NetworkAdapterInfo info, NetworkInterface nic)
+        {
+            var ipProps = nic.GetIPProperties();
+            var ipv4 = ipProps.UnicastAddresses
+                .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Select(a => a.Address.ToString())
+                .ToList();
+
+            string netName = nic.NetworkInterfaceType == NetworkInterfaceType.Wireless80211
+                             && nic.OperationalStatus == OperationalStatus.Up
+                ? GetConnectedWiFiSSID(ParseAdapterId(nic.Id))
+                : nic.Name;
+            if (string.IsNullOrEmpty(netName)) netName = nic.Name;
+
+            info.NetName = netName;
+            info.Type = $"Type: {nic.NetworkInterfaceType}";
+            info.Status = $"Status: {nic.OperationalStatus}";
+            info.IPAddress = ipv4.Count > 0 ? $"IP: {string.Join(", ", ipv4)}" : "IP: None";
+            info.Speed = nic.Speed;
+            info.Description = $"Adapter: {nic.Description}";
+            info.Mac = $"MAC: {FormatMac(nic.GetPhysicalAddress())}";
+
+            var gateway = ipProps.GatewayAddresses.FirstOrDefault()?.Address?.ToString();
+            info.Gateway = $"Gateway: {(string.IsNullOrEmpty(gateway) ? "None" : gateway)}";
+
+            var dns = ipProps.DnsAddresses.Select(a => a.ToString()).ToList();
+            info.Dns = dns.Count > 0 ? $"DNS: {string.Join(", ", dns)}" : "DNS: None";
+        }
+
+        private static string FormatMac(PhysicalAddress mac)
+        {
+            var bytes = mac?.GetAddressBytes();
+            if (bytes == null || bytes.Length == 0) return "None";
+            return string.Join(":", bytes.Select(b => b.ToString("X2")));
+        }
+
+        // Re-reads NIC metadata into the existing adapter objects (in place, so expander/graph
+        // state is preserved) and adds/removes adapters that appeared or went away.
+        private void RefreshAdapterMetadata()
+        {
+            var seen = new HashSet<Guid>();
+            bool setChanged = false;
+
+            foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (!Guid.TryParse(nic.Id, out var gid)) continue;
+                seen.Add(gid);
+
+                var existing = allAdapters.FirstOrDefault(a => a.AdapterId == gid);
+                if (existing == null)
+                {
+                    var info = CreateAdapterInfo(nic, gid);
+                    allAdapters.Add(info);
+                    // Show by default only the first time we ever see this adapter; if it was hidden
+                    // by the user and later reappears, leave its (hidden) visibility alone.
+                    if (knownAdapterIds.Add(gid))
+                    {
+                        visibleAdapters.Add(info.Name);
+                    }
+                    setChanged = true;
+                }
+                else
+                {
+                    PopulateAdapterInfo(existing, nic);
+                }
+            }
+
+            if (allAdapters.RemoveAll(a => !seen.Contains(a.AdapterId)) > 0)
+            {
+                setChanged = true;
+            }
+
+            // Drop byte-counters for adapters that went away, so one doesn't report a bogus spike if
+            // it later returns with a stale previous reading.
+            foreach (var staleId in previousData.Keys
+                         .Where(k => !(Guid.TryParse(k, out var g) && seen.Contains(g)))
+                         .ToList())
+            {
+                previousData.Remove(staleId);
+            }
+
+            // Only rebuild the bound list when the *set* of adapters changed; in-place field updates
+            // flow through INotifyPropertyChanged, so we avoid a rebuild that would collapse expanders.
+            if (setChanged)
+            {
+                ApplyNerdStats();
+                RefreshAdapters();
+            }
         }
 
         public void LoadSavedAdapterSettings()
@@ -276,11 +473,27 @@ namespace NetworkTrayApp
         private void RefreshAdapters()
         {
             Debug.WriteLine("Refreshing Adapters...");
-            NetworkList.ItemsSource = allAdapters
+            var visible = allAdapters
                 .Where(adapter => visibleAdapters.Contains(adapter.Name))
                 .ToList();
 
-            Debug.WriteLine($"Adapters displayed: {NetworkList.Items.Count}");
+            // With a single adapter showing, expand it once by default; don't re-expand it on later
+            // refreshes if the user has since collapsed it.
+            if (visible.Count == 1)
+            {
+                if (!singleAdapterAutoExpanded)
+                {
+                    visible[0].IsExpanded = true;
+                    singleAdapterAutoExpanded = true;
+                }
+            }
+            else
+            {
+                singleAdapterAutoExpanded = false;
+            }
+
+            NetworkList.ItemsSource = visible;
+            Debug.WriteLine($"Adapters displayed: {visible.Count}");
         }
 
         public List<NetworkAdapterInfo> GetNetworkAdapters()
@@ -301,37 +514,40 @@ namespace NetworkTrayApp
         }
 
 
+        private int speedTick;
+
         public void SpeedChecker(Object sender, EventArgs e)
         {
-            //Debug.WriteLine("Checking speed...");
+            var adapterSpeeds = GetNetworkSpeeds();
+            foreach (var item in NetworkList.Items)
             {
-                Dictionary<string, (long SentSpeed, long ReceiveSpeed)> adapterSpeeds = GetNetworkSpeeds();
-                foreach (var item in NetworkList.Items)
+                if (item is NetworkAdapterInfo adapter)
                 {
-                    if (item is NetworkAdapterInfo adapter)
+                    long sentSpeed = 0;
+                    long recvSpeed = 0;
+
+                    if (adapterSpeeds.TryGetValue(adapter.AdapterId, out var speeds))
                     {
-                        long sentSpeed = 0;
-                        long recvSpeed = 0;
-
-                        if (adapterSpeeds.TryGetValue(adapter.Name, out var speeds))
-                        {
-                            sentSpeed = speeds.SentSpeed;
-                            recvSpeed = speeds.ReceiveSpeed;
-                        }
-                        adapter.SentSpeed = sentSpeed;
-                        adapter.ReceiveSpeed = recvSpeed;
-                        //Debug.WriteLine($"Adapter: {adapter.Name} - Send: {adapter.SentSpeed}, Receive: {adapter.ReceiveSpeed}");
-                        // Update Graph
-                        if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
-                        if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
-                        
-
-
-                        adapter.UploadSpeedValues.Add(sentSpeed);
-                        adapter.DownloadSpeedValues.Add(recvSpeed);
+                        sentSpeed = speeds.SentSpeed;
+                        recvSpeed = speeds.ReceiveSpeed;
                     }
+                    adapter.SentSpeed = sentSpeed;
+                    adapter.ReceiveSpeed = recvSpeed;
 
+                    // Update Graph
+                    if (adapter.DownloadSpeedValues.Count > 30) adapter.DownloadSpeedValues.RemoveAt(0);
+                    if (adapter.UploadSpeedValues.Count > 30) adapter.UploadSpeedValues.RemoveAt(0);
+
+                    adapter.UploadSpeedValues.Add(sentSpeed);
+                    adapter.DownloadSpeedValues.Add(recvSpeed);
                 }
+            }
+
+            // Refresh adapter metadata (status / IP / SSID / DNS) every ~5s so the popup isn't frozen
+            // at startup state. Runs on the UI thread (DispatcherTimer), so touching the list is safe.
+            if (++speedTick % 5 == 0)
+            {
+                RefreshAdapterMetadata();
             }
         }
 
@@ -381,27 +597,24 @@ namespace NetworkTrayApp
 
 
 
+        // Keyed by nic.Id (stable GUID) rather than nic.Name so that renamed adapters or
+        // duplicate localized names don't poison the previous-byte counters.
         private Dictionary<string, (long PrevSent, long PrevRecv)> previousData = new();
-        private Dictionary<string, (long SentSpeed, long ReceiveSpeed)> GetNetworkSpeeds()
+        private Dictionary<Guid, (long SentSpeed, long ReceiveSpeed)> GetNetworkSpeeds()
         {
-            Dictionary<string, (long SentSpeed, long ReceiveSpeed)> adapterSpeeds = new();
+            Dictionary<Guid, (long SentSpeed, long ReceiveSpeed)> adapterSpeeds = new();
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
+                if (!Guid.TryParse(nic.Id, out var gid)) continue;
                 IPv4InterfaceStatistics stats = nic.GetIPv4Statistics();
-                string name = nic.Name;
-                if (name.Length >= 3)
+                string id = nic.Id;
+                if (previousData.TryGetValue(id, out var bits))
                 {
-                    previousData.TryGetValue(nic.Name, out var bits);
-                    //calculate speed
-                    long sentSpeed = (stats.BytesSent - bits.PrevSent);
-                    long recvSpeed = (stats.BytesReceived - bits.PrevRecv);
-                    //bytes to bits
-                    sentSpeed = sentSpeed * 8;
-                    recvSpeed = recvSpeed * 8;
-
-                    adapterSpeeds[name] = (sentSpeed, recvSpeed);
+                    long sentSpeed = (stats.BytesSent - bits.PrevSent) * 8;
+                    long recvSpeed = (stats.BytesReceived - bits.PrevRecv) * 8;
+                    adapterSpeeds[gid] = (sentSpeed, recvSpeed);
                 }
-                previousData[name] = (stats.BytesSent, stats.BytesReceived);
+                previousData[id] = (stats.BytesSent, stats.BytesReceived);
             }
             return adapterSpeeds;
         }
@@ -410,12 +623,35 @@ namespace NetworkTrayApp
         public class NetworkAdapterInfo : INotifyPropertyChanged
         {
             public string Name { get; set; }
-            public string NetName { get; set; }
-            public string Type { get; set; }
-            public string Status { get; set; }
-            public string IPAddress { get; set; }
-            public long Speed { get; set; }
             public Guid AdapterId { get; set; }
+
+            private string netName;
+            public string NetName { get => netName; set { if (netName != value) { netName = value; OnPropertyChanged(nameof(NetName)); } } }
+
+            private string type;
+            public string Type { get => type; set { if (type != value) { type = value; OnPropertyChanged(nameof(Type)); } } }
+
+            private string status;
+            public string Status { get => status; set { if (status != value) { status = value; OnPropertyChanged(nameof(Status)); } } }
+
+            private string ipAddress;
+            public string IPAddress { get => ipAddress; set { if (ipAddress != value) { ipAddress = value; OnPropertyChanged(nameof(IPAddress)); } } }
+
+            private long speed;
+            public long Speed { get => speed; set { if (speed != value) { speed = value; OnPropertyChanged(nameof(Speed)); } } }
+
+            // Nerd Stats fields.
+            private string description;
+            public string Description { get => description; set { if (description != value) { description = value; OnPropertyChanged(nameof(Description)); } } }
+
+            private string mac;
+            public string Mac { get => mac; set { if (mac != value) { mac = value; OnPropertyChanged(nameof(Mac)); } } }
+
+            private string gateway;
+            public string Gateway { get => gateway; set { if (gateway != value) { gateway = value; OnPropertyChanged(nameof(Gateway)); } } }
+
+            private string dns;
+            public string Dns { get => dns; set { if (dns != value) { dns = value; OnPropertyChanged(nameof(Dns)); } } }
 
             private long sentSpeed;
             public long SentSpeed
@@ -443,6 +679,46 @@ namespace NetworkTrayApp
                         OnPropertyChanged(nameof(ReceiveSpeed));
                     }
                 }
+            }
+
+            // Tab widths bound from MainWindow.xaml. Defaults match NerdStats=false.
+            // Setting NerdTab to 0 collapses the Nerd Stats tab visually.
+            private double speedTab = 140;
+            public double SpeedTab
+            {
+                get => speedTab;
+                set { if (speedTab != value) { speedTab = value; OnPropertyChanged(nameof(SpeedTab)); } }
+            }
+
+            private double detailsTab = 140;
+            public double DetailsTab
+            {
+                get => detailsTab;
+                set { if (detailsTab != value) { detailsTab = value; OnPropertyChanged(nameof(DetailsTab)); } }
+            }
+
+            private double nerdTab = 100;
+            public double NerdTab
+            {
+                get => nerdTab;
+                set { if (nerdTab != value) { nerdTab = value; OnPropertyChanged(nameof(NerdTab)); } }
+            }
+
+            // Bound (two-way) to the adapter's Expander so it can be expanded programmatically
+            // (e.g. when it's the only adapter showing) while still tracking manual toggles.
+            private bool isExpanded;
+            public bool IsExpanded
+            {
+                get => isExpanded;
+                set { if (isExpanded != value) { isExpanded = value; OnPropertyChanged(nameof(IsExpanded)); } }
+            }
+
+            // Drives the Nerd Stats tab's Visibility. Defaults to hidden (matches NerdStats=false).
+            private bool nerdStatsVisible;
+            public bool NerdStatsVisible
+            {
+                get => nerdStatsVisible;
+                set { if (nerdStatsVisible != value) { nerdStatsVisible = value; OnPropertyChanged(nameof(NerdStatsVisible)); } }
             }
 
             // Graph Data for Speeds
@@ -499,11 +775,32 @@ namespace NetworkTrayApp
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
             }
         }
+
+        public void ApplyNerdStats()
+        {
+            bool nerdStatsEnabled = XaiNet2.Properties.Settings.Default.NerdStats;
+
+            // With Nerd Stats off there are two tabs (wider); on, three tabs (narrower).
+            double speedTab = nerdStatsEnabled ? 100 : 140;
+            double detailsTab = nerdStatsEnabled ? 100 : 140;
+
+            foreach (var adapter in allAdapters)
+            {
+                adapter.SpeedTab = speedTab;
+                adapter.DetailsTab = detailsTab;
+                adapter.NerdTab = 100;
+                adapter.NerdStatsVisible = nerdStatsEnabled;
+            }
+        }
         private void SetupTrayIcon()
         {
+            using (var ms = new MemoryStream((byte[])XaiNet2.Properties.Resources.no_network_w))
+            {
+                currentTrayIcon = new Icon(ms, SystemInformation.SmallIconSize);
+            }
             trayIcon = new NotifyIcon
             {
-                Icon = new Icon(new MemoryStream((byte[])XaiNet2.Properties.Resources.no_network_w)),
+                Icon = currentTrayIcon,
                 Text = "XaiNet",
                 Visible = true
             };
@@ -531,20 +828,34 @@ namespace NetworkTrayApp
 
         static void OpenNetworkSettings(object sender, EventArgs e)
         {
-            Process.Start(new ProcessStartInfo
+            try
             {
-                FileName = Path.Combine(Environment.SystemDirectory, "ncpa.cpl"),
-                UseShellExecute = true
-            });
+                using var p = Process.Start(new ProcessStartInfo
+                {
+                    FileName = Path.Combine(Environment.SystemDirectory, "ncpa.cpl"),
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to open ncpa.cpl: {ex.Message}");
+            }
         }
 
         static void OpenNetworkSettingsPage(object sender, EventArgs e)
         {
-            Process.Start(new ProcessStartInfo
+            try
             {
-                FileName = "ms-settings:network",
-                UseShellExecute = true
-            });
+                using var p = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "ms-settings:network",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to open ms-settings:network: {ex.Message}");
+            }
         }
 
         static void ShowNetworkInfo(object sender, EventArgs e)
@@ -612,7 +923,8 @@ namespace NetworkTrayApp
             {
                 this.Show();
                 this.Activate();
-                PositionWindowNearTray();
+                var screen = GetScreenAtCursor();
+                PositionWindowNearTray(screen);
             }
         }
         private bool isPinned = false;
@@ -620,20 +932,7 @@ namespace NetworkTrayApp
         {
             isPinned = !isPinned; // Toggle state
             Topmost = isPinned;   // Keep window on top when pinned
-
-            string iconName = isPinned ? "pin-solid" : "pin-outline";
-
-            var newIcon = ImageLoader.LoadImageFromResources(iconName);
-
-            if (newIcon != null)
-            {
-                PinButton.Content = new System.Windows.Controls.Image
-                {
-                    Source = newIcon,
-                    Width = 16,
-                    Height = 16
-                };
-            }
+            PinButton.Content = ImageLoader.CreateIcon(isPinned ? "pin-solid" : "pin-outline");
         }
 
         private void OptionsButton_Click(object sender, RoutedEventArgs e)
@@ -661,25 +960,38 @@ namespace NetworkTrayApp
             vpnWindow.ShowDialog();
         }
 
-        private void PositionWindowNearTray()
+        private void TailscaleButton_Click(object sender, RoutedEventArgs e)
         {
-            var screen = System.Windows.SystemParameters.WorkArea;
-            this.Left = screen.Right - this.Width - 10;
-            this.Top = screen.Bottom - this.Height - 10;
+            if (!TailscaleManager.IsInstalled)
+            {
+                return;
+            }
+            Debug.WriteLine("Tailscale button clicked");
+            TailscaleWindow tailscaleWindow = new TailscaleWindow(this);
+            tailscaleWindow.ShowDialog();
         }
 
-        public void SetMyrkurMode(bool enable)
+        private void PositionWindowNearTray(Screen screen)
         {
-            if (enable)
+            if (screen == null)
             {
-                this.FontFamily = new System.Windows.Media.FontFamily("Comic Sans MS");
-                Debug.WriteLine("Enabled MyrkurMode");
+                // If there is no specific screen, use primary
+                screen = Screen.PrimaryScreen;
             }
-            else
+
+            Left = screen.WorkingArea.Right - Width - 10;
+            Top = screen.WorkingArea.Bottom - Height - 10;
+        }
+        private Screen GetScreenAtCursor()
+        {
+            foreach(var screen in Screen.AllScreens)
             {
-                this.FontFamily = new System.Windows.Media.FontFamily("Segoe UI"); // Default
-                Debug.WriteLine("Disabled MyrkurMode");
+                if (screen.Bounds.Contains(System.Windows.Forms.Control.MousePosition))
+                {
+                    return screen;
+                }
             }
+            return Screen.PrimaryScreen;
         }
 
         private void Window_Deactivated(object sender, EventArgs e)
@@ -692,7 +1004,7 @@ namespace NetworkTrayApp
 
         private void ExitApp(object sender, EventArgs e)
         {
-            trayIcon.Visible = false;
+            if (trayIcon != null) trayIcon.Visible = false;
             Application.Current.Shutdown();
         }
     }

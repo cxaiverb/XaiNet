@@ -1,73 +1,79 @@
-﻿using NetworkTrayApp;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using XaiNet2.Helpers;
 
 namespace XaiNet2.Menus
 {
     public partial class InputWindow : Window
     {
+        private PasswordRevealController _reveal;
 
         public InputWindow(WirelessWindow owner)
         {
             InitializeComponent();
             this.Owner = owner;
-            PositionNearMainWindow(owner);
 
             bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
             this.SetMyrkurMode(myrkurModeEnabled);
 
-
-
+            _reveal = new PasswordRevealController(pwdBox, pwdPlain, ShowPasswordButton);
         }
+
         public string SSID { get; set; }
 
-        private void PositionNearMainWindow(WirelessWindow owner)
-        {
-            // Get position from owner
-            Left = Owner.Left;
-            Top = Owner.Top;
-            Width = Owner.Width;
-            Height = Owner.Height;
-        }
-
+        // Returns the entered password if the user submitted (DialogResult == true),
+        // null on cancel or when the input was empty.
         public string GetPassword()
         {
-            if (string.IsNullOrEmpty(pwdBox.Password))
-            {
-                return null;
-            }
-            Debug.WriteLine($"Password sent to profile template: {pwdBox.Password}");
-            return pwdBox.Password;
+            if (DialogResult != true) return null;
+            string raw = _reveal.Password;
+            return string.IsNullOrEmpty(raw) ? null : raw;
         }
+
         private void SubmitButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine($"Submit button clicked");
-            string userPass = pwdBox.Password.ToString();
-            Debug.WriteLine($"Password saved: {userPass}");
-            this.Hide();
+            DialogResult = true;
+            Close();
         }
-        private void Window_Deactivated(object sender, EventArgs e)
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Hide();
+            DialogResult = false;
+            Close();
+        }
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                DialogResult = false;
+                Close();
+                e.Handled = true;
+            }
+            else
+            {
+                UpdateCapsLockHint();
+            }
+        }
+
+        private void ShowPasswordButton_Click(object sender, RoutedEventArgs e)
+        {
+            _reveal.Toggle();
+        }
+
+        private void UpdateCapsLockHint()
+        {
+            CapsLockHint.Visibility = Keyboard.IsKeyToggled(Key.CapsLock)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             WindowHelper.ApplyBlurEffect(this);
-            SSIDLabel.Text = $"Input Password for: {SSID}";
+            SSIDLabel.Text = SSID ?? string.Empty;
+            UpdateCapsLockHint();
+            pwdBox.Focus();
         }
     }
 }

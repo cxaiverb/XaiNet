@@ -1,4 +1,4 @@
-﻿<Window x:Class="XaiNet2.OptionsWindow"
+﻿<Window x:Class="XaiNet2.Menus.OptionsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Options" Width="350" Height="400"
@@ -50,6 +50,14 @@
                         <StackPanel Margin="10">
                             <CheckBox Content="Enable Auto-Start" Name="AutoStartCheckBox" Foreground="White" />
                             <CheckBox Content="Enable Myrkur Mode" Name="MyrkurModeCheckBox" Foreground="White"/>
+                            <CheckBox Content="Enable Nerd Stats" Name="NerdStatsCheckBox" Foreground="White"/>
+                            <CheckBox Content="Enable logging (troubleshooting)" Name="EnableLoggingCheckBox" Foreground="White" Margin="0,4,0,0"/>
+                            <TextBlock Text="Writes a diagnostic log you can send when reporting a problem."
+                                       Foreground="#9AA0A6" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,4"/>
+                            <Button Content="Open log folder"
+                                    HorizontalAlignment="Left"
+                                    Style="{StaticResource CustomButton}"
+                                    Click="OpenLogFolder_Click"/>
                         </StackPanel>
                     </Expander>
 

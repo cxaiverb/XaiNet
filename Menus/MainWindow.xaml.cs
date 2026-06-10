@@ -121,12 +121,12 @@ namespace XaiNet2.Menus
 
         // Lightweight reachability check: any active adapter with a non-loopback IP.
         // Replaces the previous ICMP ping to google.com which fails on networks blocking ICMP.
-        static bool HasNetworkConnectivity()
+        static bool HasNetworkConnectivity(NetworkInterface[] nics)
         {
             try
             {
                 if (!NetworkInterface.GetIsNetworkAvailable()) return false;
-                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                foreach (var nic in nics)
                 {
                     if (nic.OperationalStatus != OperationalStatus.Up) continue;
                     if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
@@ -164,12 +164,15 @@ namespace XaiNet2.Menus
         {
             string iconName = "no-network-w"; // Default to no network
 
-            if (HasNetworkConnectivity())
+            // Enumerate once and reuse across the connectivity / active-NIC / VPN checks.
+            var nics = NetworkInterface.GetAllNetworkInterfaces();
+
+            if (HasNetworkConnectivity(nics))
             {
                 NetworkInterface activeEthernet = null;
                 NetworkInterface activeWiFi = null;
 
-                foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
+                foreach (NetworkInterface nic in nics)
                 {
                     if (nic.OperationalStatus != OperationalStatus.Up)
                     {
@@ -185,7 +188,7 @@ namespace XaiNet2.Menus
                     }
                 }
 
-                bool vpnUp = IsVpnConnected();
+                bool vpnUp = IsVpnConnected(nics);
 
                 // Prioritize Wi-Fi over Ethernet if both are available
                 if (activeWiFi != null)
@@ -220,7 +223,7 @@ namespace XaiNet2.Menus
 
         // Heuristic VPN detection for the tray icon: an OpenVPN connection we started, a tunnel-type
         // adapter that's up, or an up adapter whose name/description looks like a VPN driver.
-        private static bool IsVpnConnected()
+        private static bool IsVpnConnected(NetworkInterface[] nics)
         {
             try
             {
@@ -230,7 +233,7 @@ namespace XaiNet2.Menus
 
             try
             {
-                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+                foreach (var nic in nics)
                 {
                     if (nic.OperationalStatus != OperationalStatus.Up) continue;
                     if (nic.NetworkInterfaceType == NetworkInterfaceType.Tunnel) return true;

@@ -183,13 +183,10 @@ namespace XaiNet2.Menus
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             WindowHelper.ApplyBlurEffect(this);
-            SetButtonIcon(HomeButton, "home");
-            SetButtonIcon(SettingsButton, "options");
-            SetButtonIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
+            ImageLoader.SetIcon(HomeButton, "home");
+            ImageLoader.SetIcon(SettingsButton, "options");
+            ImageLoader.SetIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
         }
-
-        private static void SetButtonIcon(Button button, string iconName)
-            => button.Content = ImageLoader.CreateIcon(iconName);
 
         private void HomeButton_Click(object sender, RoutedEventArgs e)
         {
@@ -210,7 +207,7 @@ namespace XaiNet2.Menus
         {
             isPinned = !isPinned;
             Topmost = isPinned;
-            SetButtonIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
+            ImageLoader.SetIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
         }
     }
 }

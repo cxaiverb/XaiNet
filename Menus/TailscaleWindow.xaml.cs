@@ -217,11 +217,8 @@ namespace XaiNet2.Menus
         {
             isPinned = !isPinned;
             Topmost = isPinned;
-            SetButtonIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
+            ImageLoader.SetIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
         }
-
-        private static void SetButtonIcon(Button button, string iconName)
-            => button.Content = ImageLoader.CreateIcon(iconName);
 
         private void PositionNearMainWindow(MainWindow owner)
         {
@@ -240,9 +237,9 @@ namespace XaiNet2.Menus
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             WindowHelper.ApplyBlurEffect(this);
-            SetButtonIcon(HomeButton, "home");
-            SetButtonIcon(RefreshButton, "refresh");
-            SetButtonIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
+            ImageLoader.SetIcon(HomeButton, "home");
+            ImageLoader.SetIcon(RefreshButton, "refresh");
+            ImageLoader.SetIcon(PinButton, isPinned ? "pin-solid" : "pin-outline");
             await RefreshAsync();
         }
     }

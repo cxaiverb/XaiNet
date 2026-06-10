@@ -63,5 +63,12 @@ namespace XaiNet2.Helpers
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
             return image;
         }
+
+        // Sets a button's (or any ContentControl's) content to a crisp icon. No-ops to empty content
+        // if the resource is missing.
+        public static void SetIcon(ContentControl target, string resourceName, int size = 16)
+        {
+            target.Content = CreateIcon(resourceName, size);
+        }
     }
 }

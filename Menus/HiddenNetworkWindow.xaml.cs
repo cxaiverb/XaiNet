@@ -16,6 +16,8 @@ namespace XaiNet2.Menus
 
     public partial class HiddenNetworkWindow : Window
     {
+        private PasswordRevealController _reveal;
+
         public HiddenNetworkWindow(Window owner)
         {
             InitializeComponent();
@@ -24,8 +26,7 @@ namespace XaiNet2.Menus
             bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
             this.SetMyrkurMode(myrkurModeEnabled);
 
-            pwdBox.PasswordChanged += PwdBox_PasswordChanged;
-            pwdPlain.TextChanged += PwdPlain_TextChanged;
+            _reveal = new PasswordRevealController(pwdBox, pwdPlain, ShowPasswordButton);
         }
 
         // Result fields, valid when DialogResult == true.
@@ -34,9 +35,6 @@ namespace XaiNet2.Menus
         public string NetworkPassword { get; private set; } = string.Empty;
         public bool AutoConnect { get; private set; } = true;
         public bool NonBroadcast { get; private set; } = true;
-
-        private bool _isPasswordVisible;
-        private bool _suppressSync;
 
         // Maps the chosen security type to WLAN-profile schema values. Valid after DialogResult == true.
         public (string authentication, string encryption, string keyType, bool enterprise) GetWlanParameters()
@@ -101,7 +99,7 @@ namespace XaiNet2.Menus
 
             if (RequiresPassword(sec))
             {
-                password = _isPasswordVisible ? pwdPlain.Text : pwdBox.Password;
+                password = _reveal.Password;
                 if (string.IsNullOrEmpty(password))
                 {
                     NotificationHelper.ShowToast("Add network", "A security key is required for this security type.");
@@ -167,45 +165,7 @@ namespace XaiNet2.Menus
 
         private void ShowPasswordButton_Click(object sender, RoutedEventArgs e)
         {
-            _isPasswordVisible = !_isPasswordVisible;
-            _suppressSync = true;
-            try
-            {
-                if (_isPasswordVisible)
-                {
-                    pwdPlain.Text = pwdBox.Password;
-                    pwdPlain.Visibility = Visibility.Visible;
-                    pwdBox.Visibility = Visibility.Collapsed;
-                    ShowPasswordButton.Content = "Hide";
-                    pwdPlain.Focus();
-                    pwdPlain.CaretIndex = pwdPlain.Text.Length;
-                }
-                else
-                {
-                    pwdBox.Password = pwdPlain.Text;
-                    pwdBox.Visibility = Visibility.Visible;
-                    pwdPlain.Visibility = Visibility.Collapsed;
-                    ShowPasswordButton.Content = "Show";
-                    pwdBox.Focus();
-                }
-            }
-            finally
-            {
-                _suppressSync = false;
-            }
-        }
-
-        // Keep both controls in sync so the Show/Hide toggle is lossless.
-        private void PwdBox_PasswordChanged(object sender, RoutedEventArgs e)
-        {
-            if (_suppressSync) return;
-            pwdPlain.Text = pwdBox.Password;
-        }
-
-        private void PwdPlain_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (_suppressSync) return;
-            pwdBox.Password = pwdPlain.Text;
+            _reveal.Toggle();
         }
 
         private void UpdateCapsLockHint()

@@ -43,10 +43,20 @@ namespace XaiNet2.Menus
             try
             {
                 // Use each profile's own interface so connect/delete target the right adapter.
-                profiles.AddRange(NativeWifi
-                    .EnumerateProfiles()
-                    .Where(p => !string.IsNullOrWhiteSpace(p.Name))
-                    .Select(p => new WiFiProfile { Name = p.Name, InterfaceId = p.Interface.Id }));
+                // Guard per profile so one bad entry (e.g. an interface that was unplugged) doesn't
+                // drop the entire list.
+                foreach (var p in NativeWifi.EnumerateProfiles())
+                {
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(p.Name)) continue;
+                        profiles.Add(new WiFiProfile { Name = p.Name, InterfaceId = p.Interface.Id });
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Skipping a profile: {ex.Message}");
+                    }
+                }
             }
             catch (Exception ex)
             {

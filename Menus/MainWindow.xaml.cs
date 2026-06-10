@@ -332,6 +332,9 @@ namespace XaiNet2.Menus
         // Every adapter id we've ever shown this session. Used so a hidden adapter that disappears
         // and comes back isn't force-shown again — only truly first-seen adapters auto-show.
         private readonly HashSet<Guid> knownAdapterIds = new HashSet<Guid>();
+        // Tracks whether we've already auto-expanded the lone visible adapter, so we don't re-expand
+        // it on every refresh after the user collapses it.
+        private bool singleAdapterAutoExpanded;
 
         private void LoadNetworkAdapters()
         {
@@ -428,6 +431,15 @@ namespace XaiNet2.Menus
                 setChanged = true;
             }
 
+            // Drop byte-counters for adapters that went away, so one doesn't report a bogus spike if
+            // it later returns with a stale previous reading.
+            foreach (var staleId in previousData.Keys
+                         .Where(k => !(Guid.TryParse(k, out var g) && seen.Contains(g)))
+                         .ToList())
+            {
+                previousData.Remove(staleId);
+            }
+
             // Only rebuild the bound list when the *set* of adapters changed; in-place field updates
             // flow through INotifyPropertyChanged, so we avoid a rebuild that would collapse expanders.
             if (setChanged)
@@ -462,10 +474,19 @@ namespace XaiNet2.Menus
                 .Where(adapter => visibleAdapters.Contains(adapter.Name))
                 .ToList();
 
-            // With a single adapter showing, expand it by default for convenience.
+            // With a single adapter showing, expand it once by default; don't re-expand it on later
+            // refreshes if the user has since collapsed it.
             if (visible.Count == 1)
             {
-                visible[0].IsExpanded = true;
+                if (!singleAdapterAutoExpanded)
+                {
+                    visible[0].IsExpanded = true;
+                    singleAdapterAutoExpanded = true;
+                }
+            }
+            else
+            {
+                singleAdapterAutoExpanded = false;
             }
 
             NetworkList.ItemsSource = visible;

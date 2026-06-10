@@ -131,6 +131,25 @@ namespace XaiNet2.Helpers
                 Debug.WriteLine($"Error loading VPN profiles: {ex.Message}");
             }
 
+            // Migrate legacy entries whose ConfigPath pointed at a directory (an older build stored the
+            // per-config folder, not the .ovpn file) to the actual file, so Connect's File.Exists works
+            // and the disk scan below dedupes against it instead of adding a duplicate.
+            foreach (var p in loadedProfiles)
+            {
+                if (!string.IsNullOrEmpty(p.ConfigPath) && !File.Exists(p.ConfigPath) && Directory.Exists(p.ConfigPath))
+                {
+                    try
+                    {
+                        var ovpn = Directory.GetFiles(p.ConfigPath, "*.ovpn", SearchOption.AllDirectories).FirstOrDefault();
+                        if (ovpn != null) p.ConfigPath = ovpn;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Profile path migration failed: {ex.Message}");
+                    }
+                }
+            }
+
             try
             {
                 if (Directory.Exists(configDirectory))
@@ -263,7 +282,13 @@ namespace XaiNet2.Helpers
             }
             if (profile == null) return;
 
-            Disconnect(name);
+            // Best-effort: always tell openvpn-gui to disconnect before deleting the config, even if we
+            // didn't start it (it may be up from a direct openvpn-gui session, not tracked here).
+            IssueDisconnect(profile);
+            lock (stateLock)
+            {
+                activeConnections.Remove(name);
+            }
 
             lock (stateLock)
             {
@@ -359,7 +384,7 @@ namespace XaiNet2.Helpers
             OpenVpnProfile? profile;
             lock (stateLock)
             {
-                if (!activeConnections.Contains(name) || string.IsNullOrEmpty(openVpnGuiExecutable))
+                if (!activeConnections.Contains(name))
                 {
                     return;
                 }
@@ -370,9 +395,21 @@ namespace XaiNet2.Helpers
                     return;
                 }
             }
+
+            IssueDisconnect(profile);
+            lock (stateLock)
+            {
+                activeConnections.Remove(name);
+            }
+        }
+
+        // Issues the openvpn-gui disconnect command for a profile. Best-effort; safe to call even when
+        // we never tracked the connection (used by both Disconnect and RemoveProfile).
+        private static void IssueDisconnect(OpenVpnProfile profile)
+        {
+            if (string.IsNullOrEmpty(openVpnGuiExecutable)) return;
             try
             {
-                var configName = GetConfigName(profile);
                 var psi = new ProcessStartInfo
                 {
                     FileName = openVpnGuiExecutable,
@@ -381,19 +418,12 @@ namespace XaiNet2.Helpers
                 };
                 psi.ArgumentList.Add("--command");
                 psi.ArgumentList.Add("disconnect");
-                psi.ArgumentList.Add(configName);
+                psi.ArgumentList.Add(GetConfigName(profile));
                 using var proc = Process.Start(psi);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error disconnecting VPN '{name}': {ex.Message}");
-            }
-            finally
-            {
-                lock (stateLock)
-                {
-                    activeConnections.Remove(name);
-                }
+                Debug.WriteLine($"Error disconnecting VPN '{profile.Name}': {ex.Message}");
             }
         }
         

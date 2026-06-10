@@ -122,7 +122,7 @@ namespace XaiNet2.Menus
                         IsSecured = network.IsSecurityEnabled,
                         IsConnected = !isHidden
                                       && !string.IsNullOrEmpty(currentSsid)
-                                      && string.Equals(currentSsid, ssidRaw, StringComparison.Ordinal),
+                                      && string.Equals(currentSsid, ssidRaw, StringComparison.OrdinalIgnoreCase),
                     });
                 }
 
@@ -189,7 +189,7 @@ namespace XaiNet2.Menus
             RefreshWiFiState();
         }
 
-        public void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
+        public async void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button button || button.Tag is not string rawSSID || string.IsNullOrEmpty(rawSSID))
             {
@@ -205,17 +205,25 @@ namespace XaiNet2.Menus
                 return;
             }
 
-            Debug.WriteLine($"Attempting to connect to {rawSSID}");
+            var (authentication, encryption, keyType, enterprise) = WlanProfileHelper.MapSecurity(
+                selectedNetwork.AuthenticationAlgorithm.ToString(),
+                selectedNetwork.CipherAlgorithm.ToString());
+
+            // Enterprise (802.1X): Windows prompts for credentials at association, so don't ask for a key.
+            if (enterprise)
+            {
+                var entError = WlanProfileHelper.CreateAndConnect(rawSSID, authentication, encryption,
+                    password: string.Empty, nonBroadcast: false, keyType: keyType, enterprise: true);
+                NotificationHelper.ShowToast(entError == null ? rawSSID : "Error",
+                    entError ?? $"Connecting to {rawSSID}… (sign-in may be required)");
+                return;
+            }
+
             string password = string.Empty;
             if (selectedNetwork.IsSecurityEnabled)
             {
                 var inputWindow = new InputWindow(this) { SSID = rawSSID };
-                bool? result = inputWindow.ShowDialog();
-                if (result != true)
-                {
-                    Debug.WriteLine("Password prompt cancelled");
-                    return;
-                }
+                if (inputWindow.ShowDialog() != true) return;
                 password = inputWindow.GetPassword();
                 if (string.IsNullOrEmpty(password))
                 {
@@ -224,16 +232,11 @@ namespace XaiNet2.Menus
                 }
             }
 
-            // Map ManagedNativeWifi enum names to WLAN-profile schema values.
-            string authentication = selectedNetwork.AuthenticationAlgorithm.ToString();
-            if (authentication == "Open") authentication = "open";
-            if (authentication == "RSNA_PSK") authentication = "WPA2PSK";
-            string encryption = selectedNetwork.CipherAlgorithm.ToString();
-            if (encryption == "None") encryption = "none";
-            if (encryption == "CCMP") encryption = "AES";
-
-            var error = WlanProfileHelper.CreateAndConnect(rawSSID, authentication, encryption, password, nonBroadcast: false);
-            NotificationHelper.ShowToast(error == null ? rawSSID : "Error", error ?? $"Connecting to {rawSSID}…");
+            NotificationHelper.ShowToast(rawSSID, $"Connecting to {rawSSID}…");
+            var error = await WlanProfileHelper.CreateAndConnectAsync(rawSSID, authentication, encryption,
+                password, nonBroadcast: false, keyType: keyType);
+            NotificationHelper.ShowToast(error == null ? rawSSID : "Error", error ?? $"Connected to {rawSSID}");
+            LoadWiFiNetworks();
         }
 
         private bool isPinned = false;

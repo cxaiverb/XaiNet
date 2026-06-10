@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using ManagedNativeWifi;
 
@@ -11,59 +12,115 @@ namespace XaiNet2.Helpers
     // (visible networks), the "add network manually" flow, and the saved-profiles page.
     public static class WlanProfileHelper
     {
-        // Creates/overwrites a WLAN profile for the SSID and attempts to connect.
-        // Returns null on success, or a human-readable error message.
-        public static string CreateAndConnect(
-            string ssid,
-            string authentication,
-            string encryption,
-            string password,
-            bool nonBroadcast,
-            bool autoConnect = true,
-            string keyType = "passPhrase",
-            bool enterprise = false)
+        // Maps ManagedNativeWifi's AuthenticationAlgorithm/CipherAlgorithm names (passed as strings so
+        // we don't couple to specific enum members) to WLAN-profile schema values, and flags 802.1X.
+        public static (string authentication, string encryption, string keyType, bool enterprise) MapSecurity(
+            string authAlgorithm, string cipherAlgorithm)
         {
-            var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
-            if (wifiAdapter == null)
+            string encryption = cipherAlgorithm switch
             {
-                return "No Wi-Fi adapter available";
-            }
+                "None" => "none",
+                "WEP" or "WEP40" or "WEP104" => "WEP",
+                "TKIP" => "TKIP",
+                _ => "AES", // CCMP and anything newer (GCMP / WPA3) -> AES is the safe schema value
+            };
 
-            string hexSsid = Convert.ToHexString(Encoding.UTF8.GetBytes(ssid));
-            string profileXml = BuildWlanProfileXml(
-                ssid: ssid,
-                hexSsid: hexSsid,
-                authentication: authentication,
-                encryption: encryption,
-                password: password,
-                nonBroadcast: nonBroadcast,
-                autoConnect: autoConnect,
-                keyType: keyType,
-                enterprise: enterprise);
+            // Non-PSK WPA/RSNA means 802.1X (Enterprise); the *_PSK variants are Personal.
+            bool enterprise = authAlgorithm is "WPA" or "RSNA";
 
+            string authentication = authAlgorithm switch
+            {
+                "Open" => "open",
+                "SharedKey" => "shared",
+                "WPA_PSK" => "WPAPSK",
+                "WPA" => "WPA",
+                "RSNA_PSK" => "WPA2PSK",
+                "RSNA" => "WPA2",
+                _ => "WPA2PSK",
+            };
+
+            string keyType =
+                enterprise ? null :
+                authentication == "shared" ? "networkKey" :
+                (authentication == "open" && encryption == "WEP") ? "networkKey" :
+                "passPhrase";
+
+            return (authentication, encryption, keyType, enterprise);
+        }
+
+        // Creates/overwrites a WLAN profile for the SSID and fires a (non-blocking) connect.
+        // Returns null on success, or a human-readable error message. Prefer CreateAndConnectAsync
+        // when you want to wait for and report the actual association result.
+        public static string CreateAndConnect(
+            string ssid, string authentication, string encryption, string password,
+            bool nonBroadcast, bool autoConnect = true, string keyType = "passPhrase", bool enterprise = false)
+        {
+            var error = TrySetProfile(ssid, authentication, encryption, password, nonBroadcast, autoConnect, keyType, enterprise, out var interfaceId);
+            if (error != null) return error;
             try
             {
-                NativeWifi.SetProfile(
-                    interfaceId: wifiAdapter.Id,
-                    profileType: ProfileType.AllUser,
-                    profileXml: profileXml,
-                    profileSecurity: null,
-                    overwrite: true);
-                NativeWifi.ConnectNetwork(
-                    interfaceId: wifiAdapter.Id,
-                    profileName: ssid,
-                    bssType: BssType.Infrastructure);
+                NativeWifi.ConnectNetwork(interfaceId, ssid, BssType.Infrastructure);
                 return null;
             }
             catch (Exception ex)
             {
-                // ManagedNativeWifi surfaces native errors as a long message; pull the useful bit out.
-                string pattern = @"ErrorMessage:\s([a-zA-Z\s:]+)[a-zA-Z\s.,;:\d]+ReasonMessage:\s([a-zA-Z\s:.]+)";
-                var match = Regex.Match(ex.Message, pattern);
-                return match.Success
-                    ? $"{match.Groups[1].Value.Trim()}\n{match.Groups[2].Value.Trim()}"
-                    : ex.Message;
+                return ExtractError(ex);
             }
+        }
+
+        // Like CreateAndConnect, but awaits the real association result so a wrong key / out-of-range
+        // network reports failure instead of a misleading "connecting". Returns null on success.
+        public static async Task<string> CreateAndConnectAsync(
+            string ssid, string authentication, string encryption, string password,
+            bool nonBroadcast, bool autoConnect = true, string keyType = "passPhrase", bool enterprise = false,
+            int timeoutSeconds = 12)
+        {
+            var error = TrySetProfile(ssid, authentication, encryption, password, nonBroadcast, autoConnect, keyType, enterprise, out var interfaceId);
+            if (error != null) return error;
+            try
+            {
+                bool connected = await NativeWifi.ConnectNetworkAsync(
+                    interfaceId, ssid, BssType.Infrastructure, TimeSpan.FromSeconds(timeoutSeconds));
+                return connected ? null : "Couldn't connect — wrong key, out of range, or the network refused us.";
+            }
+            catch (Exception ex)
+            {
+                return ExtractError(ex);
+            }
+        }
+
+        // Builds the profile XML and applies it. Returns null + the interface id on success, else an error.
+        private static string TrySetProfile(
+            string ssid, string authentication, string encryption, string password,
+            bool nonBroadcast, bool autoConnect, string keyType, bool enterprise, out Guid interfaceId)
+        {
+            interfaceId = Guid.Empty;
+            var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
+            if (wifiAdapter == null) return "No Wi-Fi adapter available";
+            interfaceId = wifiAdapter.Id;
+
+            string hexSsid = Convert.ToHexString(Encoding.UTF8.GetBytes(ssid));
+            string profileXml = BuildWlanProfileXml(ssid, hexSsid, authentication, encryption, password,
+                nonBroadcast, autoConnect, keyType, enterprise);
+            try
+            {
+                NativeWifi.SetProfile(interfaceId, ProfileType.AllUser, profileXml, profileSecurity: null, overwrite: true);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ExtractError(ex);
+            }
+        }
+
+        // ManagedNativeWifi surfaces native errors as a long message; pull the useful bit out.
+        private static string ExtractError(Exception ex)
+        {
+            string pattern = @"ErrorMessage:\s([a-zA-Z\s:]+)[a-zA-Z\s.,;:\d]+ReasonMessage:\s([a-zA-Z\s:.]+)";
+            var match = Regex.Match(ex.Message, pattern);
+            return match.Success
+                ? $"{match.Groups[1].Value.Trim()}\n{match.Groups[2].Value.Trim()}"
+                : ex.Message;
         }
 
         // Build the WLANProfile XML via XDocument so SSIDs and passwords containing

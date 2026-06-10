@@ -1,16 +1,11 @@
-﻿using ManagedNativeWifi;
+using ManagedNativeWifi;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using XaiNet2.Helpers;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
-
 
 namespace XaiNet2.Menus
 {
@@ -19,7 +14,10 @@ namespace XaiNet2.Menus
         public class WiFiProfile
         {
             public string Name { get; set; } = string.Empty;
+            public Guid InterfaceId { get; set; }
         }
+
+        private bool isPinned;
 
         public ProfilesWindow(Window owner)
         {
@@ -33,44 +31,22 @@ namespace XaiNet2.Menus
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            string homeIcon = "home";
-            var homeIco = ImageLoader.LoadImageFromResources(homeIcon);
-
-            if (homeIco != null)
-            {
-                HomeButton.Content = new Image
-                {
-                    Source = homeIco,
-                    Width = 16,
-                    Height = 16
-                };
-            }
-            Debug.WriteLine($"Home icon loaded: {homeIco != null}");
+            HomeButton.Content = ImageLoader.CreateIcon("home");
+            PinButton.Content = ImageLoader.CreateIcon(isPinned ? "pin-solid" : "pin-outline");
             LoadProfiles();
         }
+
         private void LoadProfiles()
         {
             var profiles = new List<WiFiProfile>();
 
             try
             {
-                var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
-                if (wifiAdapter != null)
-                {
-                    profiles.AddRange(NativeWifi
-                        .EnumerateProfiles()
-                        .Where(p => !string.IsNullOrWhiteSpace(p.Name))
-                        .Select(p => new WiFiProfile { Name = p.Name }));
-
-                    if (profiles.Count == 0)
-                    {
-                        NoProfilesTextBlock.Visibility = Visibility.Visible;
-                    }
-                    else
-                    {
-                        NoProfilesTextBlock.Visibility = Visibility.Collapsed;
-                    }
-                }
+                // Use each profile's own interface so connect/delete target the right adapter.
+                profiles.AddRange(NativeWifi
+                    .EnumerateProfiles()
+                    .Where(p => !string.IsNullOrWhiteSpace(p.Name))
+                    .Select(p => new WiFiProfile { Name = p.Name, InterfaceId = p.Interface.Id }));
             }
             catch (Exception ex)
             {
@@ -78,34 +54,40 @@ namespace XaiNet2.Menus
             }
 
             ProfilesList.ItemsSource = profiles;
+            NoProfilesTextBlock.Visibility = profiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
-        private void ConnectButton_Click(object sender, RoutedEventArgs e)
+
+        private async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button button || button.DataContext is not WiFiProfile profile)
             {
                 return;
             }
 
-            var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
-            if (wifiAdapter == null)
-            {
-                return;
-            }
-
             try
             {
-                NativeWifi.ConnectNetwork(
-                    interfaceId: wifiAdapter.Id,
-                    profileName: profile.Name,
-                    bssType: BssType.Infrastructure);
+                NotificationHelper.ShowToast(profile.Name, $"Connecting to {profile.Name}…");
 
-                NotificationHelper.ShowToast(profile.Name, $"Connecting to {profile.Name}");
+                // Await the real association result instead of a fire-and-forget request, so we can
+                // tell the user when it actually fails (out of range, wrong key, radio off…).
+                bool connected = await NativeWifi.ConnectNetworkAsync(
+                    interfaceId: profile.InterfaceId,
+                    profileName: profile.Name,
+                    bssType: BssType.Infrastructure,
+                    timeout: TimeSpan.FromSeconds(12));
+
+                NotificationHelper.ShowToast(profile.Name,
+                    connected
+                        ? $"Connected to {profile.Name}"
+                        : $"Couldn't connect to {profile.Name} (out of range, wrong key, or Wi-Fi off?)");
+                LoadProfiles();
             }
             catch (Exception ex)
             {
                 NotificationHelper.ShowToast("Error", ex.Message);
             }
         }
+
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button button || button.DataContext is not WiFiProfile profile)
@@ -113,15 +95,9 @@ namespace XaiNet2.Menus
                 return;
             }
 
-            var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
-            if (wifiAdapter == null)
-            {
-                return;
-            }
-
             try
             {
-                if (NativeWifi.DeleteProfile(wifiAdapter.Id, profile.Name))
+                if (NativeWifi.DeleteProfile(profile.InterfaceId, profile.Name))
                 {
                     NotificationHelper.ShowToast(profile.Name, "Profile deleted");
                     LoadProfiles();
@@ -136,11 +112,40 @@ namespace XaiNet2.Menus
                 NotificationHelper.ShowToast("Error", ex.Message);
             }
         }
+
+        // Create a profile for a network by name (hidden SSIDs, WEP, Enterprise, …) and try to connect.
+        private void AddNetworkButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new HiddenNetworkWindow(this);
+            if (dialog.ShowDialog() != true) return;
+
+            var (authentication, encryption, keyType, enterprise) = dialog.GetWlanParameters();
+            var error = WlanProfileHelper.CreateAndConnect(
+                ssid: dialog.NetworkSsid,
+                authentication: authentication,
+                encryption: encryption,
+                password: dialog.NetworkPassword,
+                nonBroadcast: dialog.NonBroadcast,
+                autoConnect: dialog.AutoConnect,
+                keyType: keyType,
+                enterprise: enterprise);
+
+            NotificationHelper.ShowToast(error == null ? dialog.NetworkSsid : "Error",
+                error ?? $"Profile saved — connecting to {dialog.NetworkSsid}…");
+            LoadProfiles();
+        }
+
+        private void PinButton_Click(object sender, RoutedEventArgs e)
+        {
+            isPinned = !isPinned;
+            Topmost = isPinned;
+            PinButton.Content = ImageLoader.CreateIcon(isPinned ? "pin-solid" : "pin-outline");
+        }
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             WindowHelper.ApplyBlurEffect(this);
         }
-
 
         private void PositionNearOwner()
         {
@@ -152,16 +157,20 @@ namespace XaiNet2.Menus
                 Height = Owner.Height;
             }
         }
+
         private void HomeButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
-            Owner.Show();
+            Owner?.Show();
         }
+
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            Hide();
+            // Don't hide while pinned or while a child dialog (e.g. the add-network prompt) is open.
+            if (!isPinned && OwnedWindows.Count == 0)
+            {
+                Hide();
+            }
         }
-
     }
-
 }

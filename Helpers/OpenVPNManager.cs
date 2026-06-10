@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -23,6 +24,9 @@ namespace XaiNet2.Helpers
         private static readonly List<OpenVpnProfile> profiles;
         private static readonly HashSet<string> activeConnections = new();
         private static readonly string? openVpnGuiExecutable = LocateOpenVpnGui();
+        // Guards `profiles` and `activeConnections`; both are read/written from UI handlers
+        // and from the network-change callback on a background thread.
+        private static readonly object stateLock = new();
         static OpenVPNManager()
         {
             if (openVpnGuiExecutable != null)
@@ -152,7 +156,8 @@ namespace XaiNet2.Helpers
             return loadedProfiles;
         }
 
-        private static void SaveProfiles()
+        // Caller must hold stateLock.
+        private static void SaveProfilesNoLock()
         {
             try
             {
@@ -167,47 +172,101 @@ namespace XaiNet2.Helpers
 
         public static IEnumerable<OpenVpnProfile> GetProfiles()
         {
-            return profiles;
+            lock (stateLock)
+            {
+                return profiles.ToArray();
+            }
         }
 
-        public static void AddProfile(string configPath)
+        // Copies an .ovpn into the config directory (flat — no per-config subfolder) so the
+        // openvpn-gui "config name" is simply the file name without extension. Returns the new
+        // profile, or null on failure.
+        public static OpenVpnProfile? AddProfile(string sourcePath)
         {
             try
             {
-                Directory.CreateDirectory(configDirectory);
-                string fileName = Path.GetFileName(configPath);
-                string baseName = Path.GetFileNameWithoutExtension(fileName);
-                string destPath = Path.Combine(configDirectory, baseName);
-                Directory.CreateDirectory(destPath);
-                string fileDest = Path.Combine(destPath, fileName);
-
-
-
-                File.Copy(configPath, fileDest, overwrite: false);
-
-                string profileName = Path.GetFileNameWithoutExtension(destPath);
-                string uniqueName = profileName;
-                int nameSuffix = 1;
-                while (profiles.Any(p => p.Name == uniqueName))
+                if (!File.Exists(sourcePath))
                 {
-                    uniqueName = $"{profileName}_{nameSuffix++}";
+                    Debug.WriteLine($"AddProfile: source file not found: {sourcePath}");
+                    return null;
                 }
 
-                profiles.Add(new OpenVpnProfile { Name = uniqueName, ConfigPath = destPath });
-                SaveProfiles();
+                Directory.CreateDirectory(configDirectory);
+                string baseName = Path.GetFileNameWithoutExtension(sourcePath);
+                if (string.IsNullOrWhiteSpace(baseName)) baseName = "profile";
+
+                lock (stateLock)
+                {
+                    // Pick a name not already taken by a profile or by a file on disk.
+                    string uniqueName = baseName;
+                    int nameSuffix = 1;
+                    while (profiles.Any(p => string.Equals(p.Name, uniqueName, StringComparison.OrdinalIgnoreCase))
+                           || File.Exists(Path.Combine(configDirectory, uniqueName + ".ovpn")))
+                    {
+                        uniqueName = $"{baseName}_{nameSuffix++}";
+                    }
+
+                    string destFile = Path.Combine(configDirectory, uniqueName + ".ovpn");
+                    File.Copy(sourcePath, destFile, overwrite: false);
+
+                    var profile = new OpenVpnProfile { Name = uniqueName, ConfigPath = destFile };
+                    profiles.Add(profile);
+                    SaveProfilesNoLock();
+                    return profile;
+                }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error adding VPN profile: {ex.Message}");
+                return null;
+            }
+        }
+
+        // openvpn-gui identifies a config by its path relative to the config directory, without the
+        // .ovpn extension. New profiles are stored flat (name.ovpn -> "name"); profiles discovered
+        // from a legacy subfolder layout resolve to "subfolder\name". Connect and Disconnect MUST
+        // pass the same identifier, so both route through here.
+        private static string GetConfigName(OpenVpnProfile profile)
+        {
+            try
+            {
+                var relative = Path.GetRelativePath(configDirectory, profile.ConfigPath);
+                return Path.ChangeExtension(relative, null);
+            }
+            catch
+            {
+                return profile.Name;
+            }
+        }
+
+        private static bool PathsEqual(string a, string b)
+        {
+            try
+            {
+                return string.Equals(
+                    Path.GetFullPath(a).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    Path.GetFullPath(b).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
             }
         }
 
         public static void RemoveProfile(string name)
         {
-            var profile = profiles.FirstOrDefault(p => p.Name == name);
-            if (profile != null)
+            OpenVpnProfile? profile;
+            lock (stateLock)
             {
-                Disconnect(name);
+                profile = profiles.FirstOrDefault(p => p.Name == name);
+            }
+            if (profile == null) return;
+
+            Disconnect(name);
+
+            lock (stateLock)
+            {
                 profiles.Remove(profile);
                 try
                 {
@@ -215,7 +274,11 @@ namespace XaiNet2.Helpers
                     {
                         File.Delete(profile.ConfigPath);
                         var dir = Path.GetDirectoryName(profile.ConfigPath);
-                        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                        // Clean up an empty *sub*folder (legacy layout) only — never the config root.
+                        if (!string.IsNullOrEmpty(dir)
+                            && !PathsEqual(dir, configDirectory)
+                            && Directory.Exists(dir)
+                            && !Directory.EnumerateFileSystemEntries(dir).Any())
                         {
                             Directory.Delete(dir);
                         }
@@ -225,26 +288,36 @@ namespace XaiNet2.Helpers
                 {
                     Debug.WriteLine($"Error deleting VPN config: {ex.Message}");
                 }
-                SaveProfiles();
+                SaveProfilesNoLock();
             }
         }
 
         public static void SetAutoConnect(string name, string? network)
         {
-            var profile = profiles.FirstOrDefault(p => p.Name == name);
-            if (profile != null)
+            lock (stateLock)
             {
-                profile.AutoConnectNetwork = string.IsNullOrWhiteSpace(network) ? null : network;
-                SaveProfiles();
+                var profile = profiles.FirstOrDefault(p => p.Name == name);
+                if (profile != null)
+                {
+                    profile.AutoConnectNetwork = string.IsNullOrWhiteSpace(network) ? null : network;
+                    SaveProfilesNoLock();
+                }
             }
         }
 
         public static bool Connect(string name)
         {
-            var profile = profiles.FirstOrDefault(p => p.Name == name);
-            if (profile == null || activeConnections.Contains(name) || !File.Exists(profile.ConfigPath))
+            OpenVpnProfile? profile;
+            lock (stateLock)
             {
-                return false;
+                profile = profiles.FirstOrDefault(p => p.Name == name);
+                // Note: we deliberately don't bail when activeConnections already contains the name —
+                // our state is best-effort, and re-issuing connect lets the user retry after a failed
+                // attempt (openvpn-gui treats a connect for an already-up tunnel as a no-op).
+                if (profile == null || !File.Exists(profile.ConfigPath))
+                {
+                    return false;
+                }
             }
             if (string.IsNullOrEmpty(openVpnGuiExecutable))
             {
@@ -253,18 +326,25 @@ namespace XaiNet2.Helpers
             }
             try
             {
-                var relative = Path.GetRelativePath(configDirectory, profile.ConfigPath);
-                var configName = Path.ChangeExtension(relative, null);
-                var logPath = GetLogPath(profile.Name);
                 var psi = new ProcessStartInfo
                 {
                     FileName = openVpnGuiExecutable,
-                    Arguments = $"--command connect \"{profile.Name}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 };
-                Process.Start(psi);
-                activeConnections.Add(name);
+                psi.ArgumentList.Add("--command");
+                psi.ArgumentList.Add("connect");
+                psi.ArgumentList.Add(GetConfigName(profile));
+                using var proc = Process.Start(psi);
+                if (proc == null)
+                {
+                    Debug.WriteLine($"Process.Start returned null for VPN '{name}'.");
+                    return false;
+                }
+                lock (stateLock)
+                {
+                    activeConnections.Add(name);
+                }
                 return true;
             }
             catch (Exception ex)
@@ -276,27 +356,33 @@ namespace XaiNet2.Helpers
 
         public static void Disconnect(string name)
         {
-            if (!activeConnections.Contains(name) || string.IsNullOrEmpty(openVpnGuiExecutable))
+            OpenVpnProfile? profile;
+            lock (stateLock)
             {
-                return;
-            }
-            try
-            {
-                var profile = profiles.FirstOrDefault(p => p.Name == name);
-                if (profile == null)
+                if (!activeConnections.Contains(name) || string.IsNullOrEmpty(openVpnGuiExecutable))
                 {
                     return;
                 }
-                var relative = Path.GetRelativePath(configDirectory, profile.ConfigPath);
-                var configName = Path.ChangeExtension(relative, null);
+                profile = profiles.FirstOrDefault(p => p.Name == name);
+                if (profile == null)
+                {
+                    activeConnections.Remove(name);
+                    return;
+                }
+            }
+            try
+            {
+                var configName = GetConfigName(profile);
                 var psi = new ProcessStartInfo
                 {
                     FileName = openVpnGuiExecutable,
-                    Arguments = $"--command disconnect \"{configName}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 };
-                Process.Start(psi);
+                psi.ArgumentList.Add("--command");
+                psi.ArgumentList.Add("disconnect");
+                psi.ArgumentList.Add(configName);
+                using var proc = Process.Start(psi);
             }
             catch (Exception ex)
             {
@@ -304,7 +390,10 @@ namespace XaiNet2.Helpers
             }
             finally
             {
-                activeConnections.Remove(name);
+                lock (stateLock)
+                {
+                    activeConnections.Remove(name);
+                }
             }
         }
         
@@ -314,24 +403,47 @@ namespace XaiNet2.Helpers
             return Path.Combine(LogDirectory, $"{name}.log");
         }
 
-        public static void OpenLog(string name)
+        // Returns false (without throwing) when no log file exists yet, so callers can surface that.
+        public static bool OpenLog(string name)
         {
             try
             {
                 var logPath = GetLogPath(name);
-                if (File.Exists(logPath))
+                if (!File.Exists(logPath)) return false;
+
+                var psi = new ProcessStartInfo
                 {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = logPath,
-                        UseShellExecute = true
-                    };
-                    Process.Start(psi);
-                }
+                    FileName = logPath,
+                    UseShellExecute = true
+                };
+                using var p = Process.Start(psi);
+                return true;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error opening log for VPN '{name}': {ex.Message}");
+                return false;
+            }
+        }
+
+        // Best-effort: reflects whether we issued a connect for this profile and haven't disconnected.
+        // It is not a live tunnel-status probe (openvpn-gui offers no simple status query).
+        public static bool IsActive(string name)
+        {
+            lock (stateLock)
+            {
+                return activeConnections.Contains(name);
+            }
+        }
+
+        public static bool HasActiveConnections
+        {
+            get
+            {
+                lock (stateLock)
+                {
+                    return activeConnections.Count > 0;
+                }
             }
         }
         public static void HandleNetworkChange(string? currentNetwork)
@@ -340,15 +452,19 @@ namespace XaiNet2.Helpers
             {
                 return;
             }
-            foreach (var profile in profiles)
+            // Snapshot under lock; Connect() takes its own lock.
+            List<string> toConnect;
+            lock (stateLock)
             {
-                if (string.Equals(profile.AutoConnectNetwork, currentNetwork, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!activeConnections.Contains(profile.Name))
-                    {
-                        Connect(profile.Name);
-                    }
-                }
+                toConnect = profiles
+                    .Where(p => string.Equals(p.AutoConnectNetwork, currentNetwork, StringComparison.OrdinalIgnoreCase)
+                                && !activeConnections.Contains(p.Name))
+                    .Select(p => p.Name)
+                    .ToList();
+            }
+            foreach (var name in toConnect)
+            {
+                Connect(name);
             }
         }
         public static string ConfigDirectory => configDirectory;
@@ -356,26 +472,29 @@ namespace XaiNet2.Helpers
 
         public static void SetDirectories(string? configDir, string? logDir)
         {
-            bool reload = false;
-            if (!string.IsNullOrWhiteSpace(configDir) && configDir != configDirectory)
+            lock (stateLock)
             {
-                configDirectory = configDir;
-                Directory.CreateDirectory(configDirectory);
-                Settings.Default.OpenVpnConfigDir = configDirectory;
-                reload = true;
+                bool reload = false;
+                if (!string.IsNullOrWhiteSpace(configDir) && configDir != configDirectory)
+                {
+                    configDirectory = configDir;
+                    Directory.CreateDirectory(configDirectory);
+                    Settings.Default.OpenVpnConfigDir = configDirectory;
+                    reload = true;
+                }
+                if (!string.IsNullOrWhiteSpace(logDir) && logDir != logDirectory)
+                {
+                    logDirectory = logDir;
+                    Directory.CreateDirectory(logDirectory);
+                    Settings.Default.OpenVpnLogDir = logDirectory;
+                }
+                if (reload)
+                {
+                    profiles.Clear();
+                    profiles.AddRange(LoadProfilesInternal());
+                }
+                Settings.Default.Save();
             }
-            if (!string.IsNullOrWhiteSpace(logDir) && logDir != logDirectory)
-            {
-                logDirectory = logDir;
-                Directory.CreateDirectory(logDirectory);
-                Settings.Default.OpenVpnLogDir = logDirectory;
-            }
-            if (reload)
-            {
-                profiles.Clear();
-                profiles.AddRange(LoadProfilesInternal());
-            }
-            Settings.Default.Save();
         }
 
         private static string GetDefaultConfigDir()

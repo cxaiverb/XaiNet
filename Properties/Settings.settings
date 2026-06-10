@@ -2,9 +2,6 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="XaiNet2.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="AutoStart" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
-    </Setting>
     <Setting Name="VisibleAdapters" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
@@ -16,6 +13,12 @@
     </Setting>
     <Setting Name="OpenVpnLogDir" Type="System.String" Scope="User">
       <Value Profile="(Default)">C:\Program Files\OpenVPN\log</Value>
+    </Setting>
+    <Setting Name="NerdStats" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="EnableLogging" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
     </Setting>
   </Settings>
 </SettingsFile>

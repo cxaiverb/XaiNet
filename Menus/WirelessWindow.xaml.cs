@@ -1,29 +1,15 @@
 ﻿using ManagedNativeWifi;
-using Microsoft.Windows.Themes;
-using NetworkTrayApp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-using Windows.Networking.Connectivity;
 using XaiNet2.Helpers;
-using XaiNet2.Menus;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
-namespace XaiNet2
+namespace XaiNet2.Menus
 {
     public partial class WirelessWindow : Window
     {
@@ -32,95 +18,49 @@ namespace XaiNet2
             InitializeComponent();
             Owner = owner;
             PositionNearMainWindow(owner);
+            Loaded += OnLoaded;
+
+            bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
+            this.SetMyrkurMode(myrkurModeEnabled);
+
+            RefreshWiFiState();
+        }
+
+        // Evaluates adapter presence / radio state and shows the matching placeholder, or loads
+        // the network list. Called on open and after toggling the radio.
+        private void RefreshWiFiState()
+        {
             if (!HasWiFiAdapter())
             {
                 NoWiFiTextBlock.Visibility = Visibility.Visible;
                 WiFiDisabledTextBlock.Visibility = Visibility.Collapsed;
+                NoNetworksTextBlock.Visibility = Visibility.Collapsed;
+                WiFiNetworkList.ItemsSource = null;
                 Debug.WriteLine("Wireless adapter not found :(");
-                Loaded += OnLoaded;
                 return;
             }
             if (WiFiDisabled())
             {
                 WiFiDisabledTextBlock.Visibility = Visibility.Visible;
                 NoWiFiTextBlock.Visibility = Visibility.Collapsed;
+                NoNetworksTextBlock.Visibility = Visibility.Collapsed;
+                WiFiNetworkList.ItemsSource = null;
                 Debug.WriteLine("WiFi was turned off, no wifis to show");
-                Loaded += OnLoaded;
                 return;
             }
 
             NoWiFiTextBlock.Visibility = Visibility.Collapsed;
             WiFiDisabledTextBlock.Visibility = Visibility.Collapsed;
-
             LoadWiFiNetworks();
-            Loaded += OnLoaded;
-            bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
-            this.SetMyrkurMode(myrkurModeEnabled);
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            string homeIcon = "home";
-            var homeIco = ImageLoader.LoadImageFromResources(homeIcon);
-
-            if (homeIco != null)
-            {
-                HomeButton.Content = new Image
-                {
-                    Source = homeIco,
-                    Width = 16,
-                    Height = 16
-                };
-            }
-            string refreshIcon = "refresh";
-            var refreshIco = ImageLoader.LoadImageFromResources(refreshIcon);
-
-            if (refreshIco != null)
-            {
-                RefreshButton.Content = new Image
-                {
-                    Source = refreshIco,
-                    Width = 16,
-                    Height = 16
-                };
-            }
-            string profilesIcon = "options";
-            var profileIco = ImageLoader.LoadImageFromResources(profilesIcon);
-
-            if (profileIco != null)
-            {
-                ProfileButton.Content = new Image
-                {
-                    Source = profileIco,
-                    Width = 16,
-                    Height = 16
-                };
-            }
-            string defaultIcon = "pin-outline";
-            var defaultImage = ImageLoader.LoadImageFromResources(defaultIcon);
-
-            if (defaultImage != null)
-            {
-                PinButton.Content = new System.Windows.Controls.Image
-                {
-                    Source = defaultImage,
-                    Width = 16,
-                    Height = 16
-                };
-            }
-
-            string powerIcon = "power";
-            var powerIco = ImageLoader.LoadImageFromResources(powerIcon);
-
-            if (powerIco != null)
-            {
-                ToggleButton.Content = new Image
-                {
-                    Source = powerIco,
-                    Width = 16,
-                    Height = 16
-                };
-            }
+            HomeButton.Content = ImageLoader.CreateIcon("home");
+            RefreshButton.Content = ImageLoader.CreateIcon("refresh");
+            ProfileButton.Content = ImageLoader.CreateIcon("options");
+            PinButton.Content = ImageLoader.CreateIcon("pin-outline");
+            ToggleButton.Content = ImageLoader.CreateIcon("power");
         }
 
         private bool HasWiFiAdapter()
@@ -146,14 +86,20 @@ namespace XaiNet2
 
         public class WiFiNetwork
         {
+            // Raw SSID — used as the connect-target and as the Tag passed to handlers.
             public string SSID { get; set; }
+            // Display name — shown in the list. Equals SSID, or "Hidden Network" for empty SSIDs.
+            public string DisplayName { get; set; }
             public string Authentication { get; set; }
             public string SignalStrength { get; set; }
+            public bool IsSecured { get; set; }
+            public bool IsConnected { get; set; }
         }
 
         public void LoadWiFiNetworks()
         {
             List<WiFiNetwork> networks = new List<WiFiNetwork>();
+            string currentSsid = GetCurrentSsid();
 
             try
             {
@@ -166,172 +112,136 @@ namespace XaiNet2
 
                 foreach (var network in availableNetworks)
                 {
-                    //string authentication = network.AuthenticationAlgorithm.ToString();
                     string ssidRaw = network.Ssid.ToString();
                     bool isHidden = string.IsNullOrWhiteSpace(ssidRaw);
-                    string displaySsid = isHidden
-                        ? (network.IsSecurityEnabled ? "🔒 Hidden Network" : "Hidden Network")
-                        : (network.IsSecurityEnabled ? $"🔒 {ssidRaw}" : ssidRaw);
-
                     networks.Add(new WiFiNetwork
                     {
-                        SSID = displaySsid,
+                        SSID = ssidRaw,
+                        DisplayName = isHidden ? "Hidden Network" : ssidRaw,
                         SignalStrength = $"{network.SignalQuality}%",
+                        IsSecured = network.IsSecurityEnabled,
+                        IsConnected = !isHidden
+                                      && !string.IsNullOrEmpty(currentSsid)
+                                      && string.Equals(currentSsid, ssidRaw, StringComparison.Ordinal),
                     });
                 }
 
+                // Float the connected network to the top.
+                networks = networks
+                    .OrderByDescending(n => n.IsConnected)
+                    .ToList();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error scanning Wi-Fi: {ex.Message}");
             }
 
-            // Update UI safely
-            Dispatcher.Invoke(() => WiFiNetworkList.ItemsSource = networks);
+            Dispatcher.Invoke(() =>
+            {
+                WiFiNetworkList.ItemsSource = networks;
+                NoNetworksTextBlock.Visibility = networks.Count == 0
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            });
         }
-        public static Task RefreshAsync()
+
+        private static string GetCurrentSsid()
         {
-            return NativeWifi.ScanNetworksAsync(timeout: TimeSpan.FromSeconds(10));
+            try
+            {
+                var conn = NativeWifi.EnumerateInterfaceConnections()
+                    .FirstOrDefault(c => c.IsRadioOn && c.IsConnected);
+                return conn?.ProfileName ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private void ToggleButton_Click(object sender, RoutedEventArgs e)
         {
             var iface = NativeWifi.EnumerateInterfaceConnections().FirstOrDefault();
-
-            bool wifiDisabled = iface != null && !iface.IsRadioOn;
-
-            if (wifiDisabled == true)
+            if (iface == null)
             {
-                NativeWifi.TurnOnInterfaceRadio(iface.Id);
-            }
-            else
-            {
-                NativeWifi.TurnOffInterfaceRadio(iface.Id);
+                NotificationHelper.ShowToast("Wi-Fi", "No Wi-Fi adapter available");
+                return;
             }
 
+            try
+            {
+                if (!iface.IsRadioOn)
+                {
+                    NativeWifi.TurnOnInterfaceRadio(iface.Id);
+                }
+                else
+                {
+                    NativeWifi.TurnOffInterfaceRadio(iface.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationHelper.ShowToast("Wi-Fi", ex.Message);
+                return;
+            }
+
+            // Reflect the new radio state in the UI.
+            RefreshWiFiState();
         }
 
         public void ConnectToWiFi_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not Button button || button.Tag is not string ssid)
+            if (sender is not Button button || button.Tag is not string rawSSID || string.IsNullOrEmpty(rawSSID))
             {
                 return;
             }
-            // Get the raw SSID from the button tag without the lock
-            string rawSSID = ssid.Replace("🔒 ", "");
 
             var selectedNetwork = NativeWifi.EnumerateAvailableNetworks()
                 .FirstOrDefault(n => n.Ssid.ToString() == rawSSID);
 
+            if (selectedNetwork == null)
+            {
+                NotificationHelper.ShowToast("Error", $"Network '{rawSSID}' is no longer available");
+                return;
+            }
+
             Debug.WriteLine($"Attempting to connect to {rawSSID}");
-            InputWindow inputWindow;
-            string password = "";
-            if (selectedNetwork.IsSecurityEnabled != false)
+            string password = string.Empty;
+            if (selectedNetwork.IsSecurityEnabled)
             {
-                Debug.WriteLine("Popup user input window");
-                inputWindow = new InputWindow(this)
+                var inputWindow = new InputWindow(this) { SSID = rawSSID };
+                bool? result = inputWindow.ShowDialog();
+                if (result != true)
                 {
-                    SSID = rawSSID
-                };
-                inputWindow.ShowDialog();
-
+                    Debug.WriteLine("Password prompt cancelled");
+                    return;
+                }
                 password = inputWindow.GetPassword();
-            }
-            else
-            {
-                Debug.WriteLine($"connect to open network");
+                if (string.IsNullOrEmpty(password))
+                {
+                    NotificationHelper.ShowToast("Error", "Password cannot be empty");
+                    return;
+                }
             }
 
-            var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
-            Debug.WriteLine($"Password used is: {password}");
+            // Map ManagedNativeWifi enum names to WLAN-profile schema values.
             string authentication = selectedNetwork.AuthenticationAlgorithm.ToString();
             if (authentication == "Open") authentication = "open";
             if (authentication == "RSNA_PSK") authentication = "WPA2PSK";
             string encryption = selectedNetwork.CipherAlgorithm.ToString();
             if (encryption == "None") encryption = "none";
             if (encryption == "CCMP") encryption = "AES";
-            string profileName = rawSSID;
-            Debug.WriteLine($"Profile name: {profileName}");
-            byte[] bytes = Encoding.UTF8.GetBytes(rawSSID);
-            Debug.WriteLine($"SSID bytes: {BitConverter.ToString(bytes)}");
-            string hexSSID = Convert.ToHexString(bytes);
-            Debug.WriteLine($"Hex SSID: {hexSSID}");
-            string profileTemplate = "<?xml version=\"1.0\"?>\r\n" +
-                "<WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\">\r\n    " +
-                $"<name>{rawSSID}</name>\r\n    " +
-                "<SSIDConfig>\r\n        " +
-                "<SSID>\r\n            " +
-                $"<hex>{hexSSID}</hex>\r\n            " +
-                $"<name>{rawSSID}</name>\r\n        " +
-                "</SSID>\r\n    " +
-                "</SSIDConfig>\r\n    " +
-                "<connectionType>ESS</connectionType>\r\n    " +
-                "<connectionMode>auto</connectionMode>\r\n    " +
-                "<MSM>\r\n        " +
-                "<security>\r\n            " +
-                "<authEncryption>\r\n                " +
-                $"<authentication>{authentication}</authentication>\r\n                " +
-                $"<encryption>{encryption}</encryption>\r\n                " +
-                "<useOneX>false</useOneX>\r\n            " +
-                "</authEncryption>\r\n            " +
-                "<sharedKey>\r\n                " +
-                "<keyType>passPhrase</keyType>\r\n                " +
-                "<protected>false</protected>\r\n                " +
-                $"<keyMaterial>{password}</keyMaterial>\r\n            " +
-                "</sharedKey>\r\n        " +
-                "</security>\r\n    " +
-                "</MSM>\r\n    " +
-                "<MacRandomization \r\nxmlns=\"http://www.microsoft.com/networking/WLAN/profile/v3\">\r\n        " +
-                "<enableRandomization>false</enableRandomization>\r\n    " +
-                "</MacRandomization>\r\n</WLANProfile>";
 
-            Debug.WriteLine($"Profile XML: " +
-                $"{profileTemplate}");
-
-            Debug.WriteLine("Profile modified");
-
-
-            try
-            {
-                NativeWifi.SetProfile(
-                    interfaceId: wifiAdapter.Id,
-                    profileType: ProfileType.AllUser, 
-                    profileXml: profileTemplate, 
-                    profileSecurity: null, 
-                    overwrite: true);
-                NativeWifi.ConnectNetwork(
-                    interfaceId: wifiAdapter.Id,
-                    profileName: profileName,
-                    bssType: BssType.Infrastructure);
-
-                NotificationHelper.ShowToast($"{rawSSID}", $"Connected to {rawSSID}");
-            }
-            catch (Exception ex)
-            {
-                string pattern = @"ErrorMessage:\s([a-zA-Z\s:]+)[a-zA-Z\s.,;:\d]+ReasonMessage:\s([a-zA-Z\s:.]+)";
-                var match = Regex.Match(ex.Message, pattern);
-                NotificationHelper.ShowToast("Error", $"{match.Groups[1].Value}\n{match.Groups[2].Value}");
-            }
+            var error = WlanProfileHelper.CreateAndConnect(rawSSID, authentication, encryption, password, nonBroadcast: false);
+            NotificationHelper.ShowToast(error == null ? rawSSID : "Error", error ?? $"Connecting to {rawSSID}…");
         }
+
         private bool isPinned = false;
         private void PinButton_Click(object sender, RoutedEventArgs e)
         {
             isPinned = !isPinned; // Toggle state
             Topmost = isPinned;   // Keep window on top when pinned
-
-            string iconName = isPinned ? "pin-solid" : "pin-outline";
-
-            var newIcon = ImageLoader.LoadImageFromResources(iconName);
-
-            if (newIcon != null)
-            {
-                PinButton.Content = new System.Windows.Controls.Image
-                {
-                    Source = newIcon,
-                    Width = 16,
-                    Height = 16
-                };
-            }
+            PinButton.Content = ImageLoader.CreateIcon(isPinned ? "pin-solid" : "pin-outline");
         }
         private void ProfileButton_Click(object sender, RoutedEventArgs e)
         {
@@ -342,7 +252,9 @@ namespace XaiNet2
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            if( !isPinned)
+            // Don't auto-hide while a child dialog (e.g. password prompt) is open,
+            // otherwise the parent disappears under the dialog and never reappears.
+            if (!isPinned && OwnedWindows.Count == 0)
             {
                 Hide();
             }
@@ -353,9 +265,62 @@ namespace XaiNet2
         }
 
 
-        private void RefreshWiFi_Click(object sender, RoutedEventArgs e)
+        private void HiddenNetworkButton_Click(object sender, RoutedEventArgs e)
         {
-            LoadWiFiNetworks();
+            var dialog = new HiddenNetworkWindow(this);
+            if (dialog.ShowDialog() != true) return;
+
+            var (authentication, encryption, keyType, enterprise) = dialog.GetWlanParameters();
+            var error = WlanProfileHelper.CreateAndConnect(
+                ssid: dialog.NetworkSsid,
+                authentication: authentication,
+                encryption: encryption,
+                password: dialog.NetworkPassword,
+                nonBroadcast: dialog.NonBroadcast,
+                autoConnect: dialog.AutoConnect,
+                keyType: keyType,
+                enterprise: enterprise);
+            NotificationHelper.ShowToast(error == null ? dialog.NetworkSsid : "Error",
+                error ?? $"Connecting to {dialog.NetworkSsid}…");
+        }
+
+        private void DisconnectButton_Click(object sender, RoutedEventArgs e)
+        {
+            var wifiAdapter = NativeWifi.EnumerateInterfaces().FirstOrDefault();
+            if (wifiAdapter == null)
+            {
+                NotificationHelper.ShowToast("Error", "No WiFi adapter available");
+                return;
+            }
+            try
+            {
+                NativeWifi.DisconnectNetwork(wifiAdapter.Id);
+                NotificationHelper.ShowToast("WiFi", "Disconnected");
+                LoadWiFiNetworks();
+            }
+            catch (Exception ex)
+            {
+                NotificationHelper.ShowToast("Error", ex.Message);
+            }
+        }
+
+        private async void RefreshWiFi_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshButton.IsEnabled = false;
+            try
+            {
+                // Real scan, not just a re-read of cached results.
+                await NativeWifi.ScanNetworksAsync(timeout: TimeSpan.FromSeconds(8));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"WiFi scan failed: {ex.Message}");
+            }
+            finally
+            {
+                LoadWiFiNetworks();
+                RefreshButton.IsEnabled = true;
+            }
         }
         private void HomeButton_Click(object sender, RoutedEventArgs e)
         {

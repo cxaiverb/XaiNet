@@ -22,67 +22,87 @@
         <Border x:Name="BlurredBackground" Background="#55000000" CornerRadius="10"/>
         <Border CornerRadius="10" Background="#AA222222" Padding="10">
             <Grid>
-                <Grid VerticalAlignment="Top"
-                      HorizontalAlignment="Left"
-                      ShowGridLines="True">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header: title fills, nav buttons pinned right -->
+                <Grid Grid.Row="0" Margin="0,0,0,6">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Saved Profiles"
                                Foreground="White"
                                FontSize="16"
-                               Margin="0,0,200,0"
                                Grid.Column="0"
-                               Grid.Row="0"/>
-                    <Button Name="HomeButton"
-                            Click="HomeButton_Click"
-                            Width="32" Height="32"
-                            ToolTip="Home"
-                            Background="Transparent" 
-                            Foreground="White"
-                            BorderThickness="0"
-                            Cursor="Hand"
-                            Grid.Column="1"
-                            Grid.Row="0"/>
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Name="HomeButton"
+                                Click="HomeButton_Click"
+                                Width="32" Height="32"
+                                ToolTip="Back to Wi-Fi"
+                                Background="Transparent"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Cursor="Hand"/>
+                        <Button Name="PinButton"
+                                Click="PinButton_Click"
+                                Width="32" Height="32"
+                                ToolTip="Pins window to the top"
+                                Background="Transparent"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Cursor="Hand"/>
+                    </StackPanel>
                 </Grid>
-                <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <ScrollViewer.Resources>
                         <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
                     </ScrollViewer.Resources>
                     <StackPanel Name="ProfilePanel">
-                        <StackPanel Name="ProfilesListPanel">
-                            <TextBlock Text="No saved profiles found."
-                                       Foreground="LightGray"
-                                       Name="NoProfilesTextBlock"/>
-                        </StackPanel>
+                        <Button x:Name="AddNetworkButton"
+                                Click="AddNetworkButton_Click"
+                                Style="{StaticResource CustomButton}"
+                                Content="+ Add network…"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Padding="12,8"
+                                Margin="2,0,2,8"
+                                ToolTip="Create a profile for a network by name — hidden SSIDs, WEP, WPA2-Enterprise, etc."/>
+                        <TextBlock Text="No saved profiles found."
+                                   Foreground="LightGray"
+                                   Margin="5,8"
+                                   Name="NoProfilesTextBlock"
+                                   Visibility="Collapsed"/>
                         <ItemsControl x:Name="ProfilesList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="5" Padding="5" Background="#AA333333" CornerRadius="5">
-                                        <Grid>
+                                    <Border Margin="2,3" Padding="8,6" Background="#44000000" CornerRadius="6">
+                                        <Grid VerticalAlignment="Center">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="160"/>
-                                                <ColumnDefinition Width="75"/>
-                                                <ColumnDefinition Width="75"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding Name}" 
-                                                        Foreground="White"
-                                                        VerticalAlignment="Center"
-                                                        Grid.Column="0"/>
+                                            <TextBlock Text="{Binding Name}"
+                                                       Foreground="White"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Grid.Column="0"/>
                                             <Button Content="Connect"
                                                     Click="ConnectButton_Click"
                                                     Style="{StaticResource CustomButton}"
-                                                    Margin="0,0,5,0"
+                                                    Margin="6,0,0,0"
+                                                    ToolTip="Connect to this saved network"
                                                     Grid.Column="1"/>
                                             <Button Content="Delete"
                                                     Click="DeleteButton_Click"
                                                     Style="{StaticResource CustomButton}"
-                                                    Margin="0,0,5,0"
+                                                    Margin="6,0,0,0"
+                                                    ToolTip="Forget this saved network"
                                                     Grid.Column="2"/>
                                         </Grid>
                                     </Border>

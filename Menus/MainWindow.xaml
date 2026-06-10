@@ -1,4 +1,4 @@
-﻿<Window x:Class="NetworkTrayApp.MainWindow"
+﻿<Window x:Class="XaiNet2.Menus.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:XaiNet2.Properties"
@@ -21,6 +21,7 @@
                 <ResourceDictionary Source="/Helpers/Themes.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <vm:BitsToHumanConverter x:Key="BitsToHumanConverter"/>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -29,64 +30,75 @@
         <Border CornerRadius="10" Background="#AA222222" Padding="10">
 
             <Grid>
-                <Grid VerticalAlignment="Top" 
-                      HorizontalAlignment="Left" 
-                      ShowGridLines="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header: title fills, action buttons pinned right -->
+                <Grid Grid.Row="0" Margin="0,0,0,6">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="auto"></ColumnDefinition>
-                        <ColumnDefinition Width="auto"></ColumnDefinition>
-                        <ColumnDefinition Width="auto"></ColumnDefinition>
-                        <ColumnDefinition Width="auto"></ColumnDefinition>
-                        <ColumnDefinition Width="auto"></ColumnDefinition>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="auto"></RowDefinition>
-                    </Grid.RowDefinitions>
-                    <TextBlock x:Name="NetworkTextBlock" Text="Networks" Foreground="White" FontSize="16" 
+                    <TextBlock x:Name="NetworkTextBlock" Text="Networks" Foreground="White" FontSize="16"
                                Grid.Column="0"
-                               Grid.Row="0"
-                               Margin="0,0,135,0"
-                               VerticalAlignment="Center"
-                               />
-
-                    <!-- Pin Button -->
-                    <Button Name="PinButton" Width="32" Height="32"
-                            Background="Transparent" Foreground="White" 
-                            BorderThickness="0" Cursor="Hand"
-                            Click="PinButton_Click"
-                            Grid.Column="4"
-                            Grid.Row="0"
-                            ToolTip="Pins window to the top"/>
-
-                    <!-- Options Button -->
-                    <Button x:Name="OptionsButton" Width="32" Height="32"
-                            Background="Transparent" Foreground="White"
-                            BorderThickness="0" Cursor="Hand" 
-                            Click="OptionsButton_Click"
-                            Grid.Column="3"
-                            Grid.Row="0"
-                            ToolTip="Options Menu"/>
-
-                    <!-- Wireless Networks Button -->
-                    <Button x:Name="WifiButton" Width="32" Height="32"
-                            Background="Transparent" Foreground="White"
-                            BorderThickness="0" Cursor="Hand"
-                            Click="WifiButton_Click"
-                            Grid.Column="2"
-                            Grid.Row="0"
-                            ToolTip="WiFi Menu"/>
-
-                    <!-- OpenVPN Button -->
-                    <Button x:Name="VPNButton" Width="32" Height="32"
-                            Background="Transparent" Foreground="White"
-                            BorderThickness="0" Cursor="Hand"
-                            Click="VPNButton_Click"
-                            Grid.Column="1"
-                            Grid.Row="0"
-                            ToolTip="OpenVPN Menu"/>
-
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <!-- OpenVPN Button -->
+                        <Button x:Name="VPNButton" Width="32" Height="32"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Click="VPNButton_Click"
+                                ToolTip="OpenVPN Menu"/>
+                        <!-- Tailscale Button (icon is an inline 3x3 dot grid evoking the Tailscale logo) -->
+                        <Button x:Name="TailscaleButton" Width="32" Height="32"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Click="TailscaleButton_Click"
+                                ToolTip="Tailscale">
+                            <Viewbox Width="16" Height="16">
+                                <Grid Width="16" Height="16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/><RowDefinition/><RowDefinition/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Grid.Row="0" Grid.Column="0" Fill="White" Opacity="0.35" Margin="1"/>
+                                    <Ellipse Grid.Row="0" Grid.Column="1" Fill="White" Margin="1"/>
+                                    <Ellipse Grid.Row="0" Grid.Column="2" Fill="White" Opacity="0.35" Margin="1"/>
+                                    <Ellipse Grid.Row="1" Grid.Column="0" Fill="White" Margin="1"/>
+                                    <Ellipse Grid.Row="1" Grid.Column="1" Fill="White" Margin="1"/>
+                                    <Ellipse Grid.Row="1" Grid.Column="2" Fill="White" Margin="1"/>
+                                    <Ellipse Grid.Row="2" Grid.Column="0" Fill="White" Opacity="0.35" Margin="1"/>
+                                    <Ellipse Grid.Row="2" Grid.Column="1" Fill="White" Margin="1"/>
+                                    <Ellipse Grid.Row="2" Grid.Column="2" Fill="White" Opacity="0.35" Margin="1"/>
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                        <!-- Wireless Networks Button -->
+                        <Button x:Name="WifiButton" Width="32" Height="32"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Click="WifiButton_Click"
+                                ToolTip="WiFi Menu"/>
+                        <!-- Options Button -->
+                        <Button x:Name="OptionsButton" Width="32" Height="32"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Click="OptionsButton_Click"
+                                ToolTip="Options Menu"/>
+                        <!-- Pin Button -->
+                        <Button Name="PinButton" Width="32" Height="32"
+                                Background="Transparent" Foreground="White"
+                                BorderThickness="0" Cursor="Hand"
+                                Click="PinButton_Click"
+                                ToolTip="Pins window to the top"/>
+                    </StackPanel>
                 </Grid>
-                <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <ScrollViewer.Resources>
                         <Style TargetType="ScrollBar" BasedOn="{StaticResource CustomScrollBar}"/>
                     </ScrollViewer.Resources>
@@ -94,13 +106,14 @@
                         <ItemsControl Name="NetworkList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Expander Header="{Binding NetName}" Foreground="White" FontSize="14" Margin="5">
+                                    <Expander Header="{Binding NetName}" Foreground="White" FontSize="14" Margin="5"
+                                              IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
                                         <Expander.Resources>
                                             <Style TargetType="Expander" BasedOn="{StaticResource ExpanderStyle1}"/>
                                         </Expander.Resources>
                                         <StackPanel Margin="10,0,0,0">
                                             <TabControl Background="Transparent" HorizontalAlignment="Center">
-                                                <TabItem Header="Speed" Width="140">
+                                                <TabItem Header="Speed" Width="{Binding SpeedTab}">
                                                     <StackPanel>
                                                         <Grid HorizontalAlignment="Center">
                                                             <Grid.ColumnDefinitions>
@@ -124,7 +137,7 @@
                                                                     />
                                                     </StackPanel>
                                                 </TabItem>
-                                                <TabItem Header="Details" Width="140">
+                                                <TabItem Header="Details" Width="{Binding DetailsTab}">
                                                     <StackPanel Margin="10,0,0,0">
                                                         <TextBlock Text="{Binding Type}" Foreground="LightGray"/>
                                                         <TextBlock Text="{Binding Status}" Foreground="LightGray"/>
@@ -132,6 +145,15 @@
                                                         <TextBlock Text="{Binding Speed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}{0}ps}" Foreground="LightGray"/>
                                                         <TextBlock Text="{Binding SentSpeed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}{0}/s}" Foreground="LightGray"/>
                                                         <TextBlock Text="{Binding ReceiveSpeed, Converter={StaticResource BitsToHumanConverter}, StringFormat={}{0}/s}" Foreground="LightGray"/>
+                                                    </StackPanel>
+                                                </TabItem>
+                                                <TabItem Header="Nerd Stats" Width="{Binding NerdTab}"
+                                                         Visibility="{Binding NerdStatsVisible, Converter={StaticResource BoolToVis}}">
+                                                    <StackPanel Margin="10,0,0,0">
+                                                        <TextBlock Text="{Binding Description}" Foreground="LightGray" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding Mac}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding Gateway}" Foreground="LightGray"/>
+                                                        <TextBlock Text="{Binding Dns}" Foreground="LightGray" TextWrapping="Wrap"/>
                                                     </StackPanel>
                                                 </TabItem>
                                             </TabControl>

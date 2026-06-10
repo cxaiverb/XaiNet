@@ -27,11 +27,13 @@ namespace XaiNet2.Helpers
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is long bytes)
+            // Used both in bindings and in LiveCharts tooltip formatters, so return an empty string
+            // rather than throwing when handed an unexpected value.
+            if (value is long bits)
             {
-                return BitsToHumanReadable(bytes);
+                return BitsToHumanReadable(bits);
             }
-            throw new ArgumentException("Value must be a long representing bytes.");
+            return string.Empty;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

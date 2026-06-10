@@ -86,6 +86,21 @@
                                        Name="NoNetworksTextBlock"
                                        Margin="5,8"
                                        Visibility="Collapsed"/>
+                            <StackPanel Name="WiFiUnavailablePanel" Margin="5,8" Visibility="Collapsed">
+                                <TextBlock Text="Couldn't read Wi-Fi status."
+                                           Foreground="LightGray"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="Windows needs Location services turned on to read Wi-Fi info and list nearby networks. If your Wi-Fi is on, enable Location and try again."
+                                           Foreground="#9AA0A6"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0"/>
+                                <Button Content="Open Location settings"
+                                        Style="{StaticResource CustomButton}"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,8,0,0"
+                                        Click="OpenLocationSettings_Click"/>
+                            </StackPanel>
                         </StackPanel>
                         <Button x:Name="HiddenNetworkButton"
                                 Click="HiddenNetworkButton_Click"

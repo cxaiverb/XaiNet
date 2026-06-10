@@ -76,3 +76,8 @@ dotnet publish -r win-x64 -c Release -p:PublishSingleFile=true --self-contained 
   is the single source of truth and is used for **both** connect and disconnect. `activeConnections`
   is best-effort in-memory state (openvpn-gui has no simple status query).
 - Wi-Fi work uses the `ManagedNativeWifi` package; `SignalStrength`/`SignalQuality` are 0–100 %.
+- **WLAN queries need Windows Location services.** On Windows 10/11, `WlanQueryInterface` for the
+  current connection / SSID requires the Location service to be ON, otherwise it throws
+  `UnauthorizedAccessException` (ERROR_ACCESS_DENIED, 5). So `NativeWifi.EnumerateInterfaceConnections`,
+  `EnumerateAvailableNetworks`, and `EnumerateBssNetworks` can throw — always wrap them. The Wi-Fi
+  window degrades to a "turn on Location services" message instead of crashing.

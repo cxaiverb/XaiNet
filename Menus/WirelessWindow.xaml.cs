@@ -13,12 +13,17 @@ namespace XaiNet2.Menus
 {
     public partial class WirelessWindow : Window
     {
+        // Suppresses deactivate-to-hide while we launch an external app (e.g. the Settings page);
+        // reset when the window regains focus so it auto-hides normally afterwards.
+        private bool _suppressHide;
+
         public WirelessWindow(MainWindow owner)
         {
             InitializeComponent();
             Owner = owner;
             PositionNearMainWindow(owner);
             Loaded += OnLoaded;
+            Activated += (_, _) => _suppressHide = false;
 
             bool myrkurModeEnabled = Properties.Settings.Default.MyrkurMode;
             this.SetMyrkurMode(myrkurModeEnabled);
@@ -30,27 +35,45 @@ namespace XaiNet2.Menus
         // the network list. Called on open and after toggling the radio.
         private void RefreshWiFiState()
         {
+            // Reset every placeholder message first.
+            NoWiFiTextBlock.Visibility = Visibility.Collapsed;
+            WiFiDisabledTextBlock.Visibility = Visibility.Collapsed;
+            NoNetworksTextBlock.Visibility = Visibility.Collapsed;
+            WiFiUnavailablePanel.Visibility = Visibility.Collapsed;
+
             if (!HasWiFiAdapter())
             {
                 NoWiFiTextBlock.Visibility = Visibility.Visible;
-                WiFiDisabledTextBlock.Visibility = Visibility.Collapsed;
-                NoNetworksTextBlock.Visibility = Visibility.Collapsed;
                 WiFiNetworkList.ItemsSource = null;
                 Debug.WriteLine("Wireless adapter not found :(");
                 return;
             }
-            if (WiFiDisabled())
+
+            // Reading Wi-Fi radio/connection state goes through the WLAN API, which on Windows 10/11
+            // requires the Location service; without it WlanQueryInterface throws ACCESS_DENIED.
+            // Catch that (and any other WLAN failure) and show a message instead of crashing.
+            bool radioOff;
+            try
+            {
+                radioOff = WiFiDisabled();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Wi-Fi state query failed: {ex.Message}");
+                Logger.Error("Wi-Fi state query failed (Windows Location services off?)", ex);
+                WiFiUnavailablePanel.Visibility = Visibility.Visible;
+                WiFiNetworkList.ItemsSource = null;
+                return;
+            }
+
+            if (radioOff)
             {
                 WiFiDisabledTextBlock.Visibility = Visibility.Visible;
-                NoWiFiTextBlock.Visibility = Visibility.Collapsed;
-                NoNetworksTextBlock.Visibility = Visibility.Collapsed;
                 WiFiNetworkList.ItemsSource = null;
                 Debug.WriteLine("WiFi was turned off, no wifis to show");
                 return;
             }
 
-            NoWiFiTextBlock.Visibility = Visibility.Collapsed;
-            WiFiDisabledTextBlock.Visibility = Visibility.Collapsed;
             LoadWiFiNetworks();
         }
 
@@ -161,15 +184,17 @@ namespace XaiNet2.Menus
 
         private void ToggleButton_Click(object sender, RoutedEventArgs e)
         {
-            var iface = NativeWifi.EnumerateInterfaceConnections().FirstOrDefault();
-            if (iface == null)
-            {
-                NotificationHelper.ShowToast("Wi-Fi", "No Wi-Fi adapter available");
-                return;
-            }
-
+            // The whole thing is wrapped: EnumerateInterfaceConnections goes through the WLAN API,
+            // which throws ACCESS_DENIED when Windows Location services are off.
             try
             {
+                var iface = NativeWifi.EnumerateInterfaceConnections().FirstOrDefault();
+                if (iface == null)
+                {
+                    NotificationHelper.ShowToast("Wi-Fi", "No Wi-Fi adapter available");
+                    return;
+                }
+
                 if (!iface.IsRadioOn)
                 {
                     NativeWifi.TurnOnInterfaceRadio(iface.Id);
@@ -181,7 +206,9 @@ namespace XaiNet2.Menus
             }
             catch (Exception ex)
             {
-                NotificationHelper.ShowToast("Wi-Fi", ex.Message);
+                Debug.WriteLine($"Wi-Fi toggle failed: {ex.Message}");
+                Logger.Error("Wi-Fi toggle failed", ex);
+                NotificationHelper.ShowToast("Wi-Fi", "Couldn't change Wi-Fi state (are Location services on?)");
                 return;
             }
 
@@ -196,8 +223,18 @@ namespace XaiNet2.Menus
                 return;
             }
 
-            var selectedNetwork = NativeWifi.EnumerateAvailableNetworks()
-                .FirstOrDefault(n => n.Ssid.ToString() == rawSSID);
+            AvailableNetworkPack selectedNetwork;
+            try
+            {
+                selectedNetwork = NativeWifi.EnumerateAvailableNetworks()
+                    .FirstOrDefault(n => n.Ssid.ToString() == rawSSID);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"EnumerateAvailableNetworks failed: {ex.Message}");
+                NotificationHelper.ShowToast("Error", "Couldn't read Wi-Fi networks (are Location services on?)");
+                return;
+            }
 
             if (selectedNetwork == null)
             {
@@ -255,9 +292,9 @@ namespace XaiNet2.Menus
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            // Don't auto-hide while a child dialog (e.g. password prompt) is open,
-            // otherwise the parent disappears under the dialog and never reappears.
-            if (!isPinned && OwnedWindows.Count == 0)
+            // Don't auto-hide while a child dialog (e.g. password prompt) is open or while we're
+            // launching an external app, otherwise the parent disappears and never reappears.
+            if (!isPinned && !_suppressHide && OwnedWindows.Count == 0)
             {
                 Hide();
             }
@@ -329,6 +366,24 @@ namespace XaiNet2.Menus
         {
             Close();
             Owner.Show();
+        }
+
+        private void OpenLocationSettings_Click(object sender, RoutedEventArgs e)
+        {
+            // Launching Settings steals focus; keep this window from auto-hiding (reset on re-activate).
+            _suppressHide = true;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "ms-settings:privacy-location",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to open Location settings: {ex.Message}");
+            }
         }
 
     }
